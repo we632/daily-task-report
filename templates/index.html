@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Daily Task Report</title>
+  <style>
+    :root {
+      --primary-color: #111827;
+      --bg-color: #f6f7fb;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      margin: 0;
+      /* 使用 flex 布局让子元素(container)在屏幕中心 */
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px; /* 限制最大宽度，防止内容拉得太宽 */
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+
+    h2 { text-align: center; color: var(--primary-color); margin-top: 0; }
+    
+    .form-group { margin-bottom: 20px; }
+
+    /* 复选框改为网格排列，比单纯的垂直列表更专业 */
+    .column-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin: 15px 0;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+    }
+  </style>
+  </head>
+<body>
+  <div class="container">
+    <h2>Upload Excel</h2>
+
+    <form action="/preview" method="post" enctype="multipart/form-data">
+      <div class="form-group">
+        <label style="display:block; margin-bottom:8px; font-weight:500;">Excel File:</label>
+        <input type="file" name="file" accept=".xlsx,.xls" required style="width:100%;">
+      </div>
+
+      <h3 style="font-size: 16px; margin-top:25px;">Select Columns</h3>
+      
+      <div class="column-list">
+        {% for raw, label in column_map.items() %}
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" name="selected_columns" value="{{raw}}"
+              {% if raw in default_columns %}checked{% endif %}>
+            {{label}}
+          </label>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:24px;">
+        <button class="btn" type="submit">Preview Report</button>
+      </div>
+    </form>
+  </div>
+  </body>
+</html>

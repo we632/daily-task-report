@@ -1,0 +1,432 @@
+from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
+
+import pandas as pd
+import io
+import uuid
+import time
+import zipfile
+import os
+import tempfile
+import asyncio
+from contextlib import suppress
+
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+
+# ===== PDF 中文字体（最稳方案，无需字体文件）=====
+pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+PDF_FONT = "STSong-Light"
+
+
+app = FastAPI()
+async def cleanup_loop():
+    while True:
+        cleanup_store()
+        await asyncio.sleep(10 * 60)  # 每10分钟清一次，可调
+
+templates = Jinja2Templates(directory="templates")
+
+# ============ 配置 ============
+COLUMN_MAP = {
+    "运单号": "Tracking No.",
+    "DSP名称": "DSP",
+    "区域名称": "Area",
+    "司机名称": "Delivery Driver",
+    "任务日期": "Task Date",
+    "运单状态": "Status",
+    "仓库名称": "Warehouse",
+}
+
+DEFAULT_COLUMNS = ["运单号", "DSP名称", "区域名称", "司机名称", "任务日期", "运单状态"]
+
+# 上传文件内存缓存：file_id -> {"bytes":..., "ts":...}
+# 临时文件缓存：file_id -> {"path":..., "ts":..., "size":...}
+FILE_STORE: dict[str, dict] = {}
+FILE_TTL_SECONDS = 60 * 60  # 1小时
+
+
+def cleanup_store() -> None:
+    now = time.time()
+    expired = [k for k, v in FILE_STORE.items() if now - v["ts"] > FILE_TTL_SECONDS]
+    for k in expired:
+        info = FILE_STORE.pop(k, None)
+        if not info:
+            continue
+        path = info.get("path")
+        if path and os.path.exists(path):
+            with suppress(Exception):
+                os.remove(path)
+
+def save_file(content: bytes) -> str:
+    cleanup_store()
+    file_id = str(uuid.uuid4())
+
+    # ✅ 写入系统临时目录（跨平台）
+    fd, path = tempfile.mkstemp(prefix="wms_", suffix=".xlsx")
+    os.close(fd)  # 只要路径，写入用 open
+
+    with open(path, "wb") as f:
+        f.write(content)
+
+    FILE_STORE[file_id] = {"path": path, "ts": time.time(), "size": len(content)}
+    return file_id
+
+def load_file(file_id: str) -> bytes:
+    cleanup_store()
+    if not file_id or file_id not in FILE_STORE:
+        raise ValueError("file_id invalid or expired, please upload again.")
+    path = FILE_STORE[file_id]["path"]
+    if not path or not os.path.exists(path):
+        # 文件被删/丢失
+        FILE_STORE.pop(file_id, None)
+        raise ValueError("temp file missing, please upload again.")
+    with open(path, "rb") as f:
+        return f.read()
+
+
+def read_excel(upload_bytes: bytes) -> pd.DataFrame:
+    df = pd.read_excel(io.BytesIO(upload_bytes), sheet_name=0)
+    df = df.dropna(how="all")
+    df = df.fillna("")
+    df = df.loc[~(df.astype(str).apply(lambda r: (r.str.strip() == "").all(), axis=1))]
+    return df
+
+
+def unique_sorted(df: pd.DataFrame, col: str) -> list[str]:
+    if col not in df.columns:
+        return []
+    s = df[col].dropna().astype(str).str.strip()
+    return sorted(x for x in s.unique().tolist() if x != "")
+
+def apply_filters(
+    df: pd.DataFrame,
+    dsps: list[str],
+    areas: list[str],
+    drivers: list[str],
+    statuses: list[str],
+) -> pd.DataFrame:
+    if dsps and "DSP名称" in df.columns:
+        df = df[df["DSP名称"].isin(dsps)]
+    if areas and "区域名称" in df.columns:
+        df = df[df["区域名称"].isin(areas)]
+    if drivers and "司机名称" in df.columns:
+        df = df[df["司机名称"].isin(drivers)]
+    if statuses and "运单状态" in df.columns:
+        df = df[df["运单状态"].isin(statuses)]
+    return df
+
+def select_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    cols = cols or DEFAULT_COLUMNS
+    cols = [c for c in cols if c in df.columns]
+    return df[cols].copy()
+
+
+@app.on_event("startup")
+async def _startup():
+    asyncio.create_task(cleanup_loop())
+
+
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "column_map": COLUMN_MAP,
+            "default_columns": DEFAULT_COLUMNS,
+        },
+    )
+
+
+@app.post("/preview", response_class=HTMLResponse)
+async def preview(
+    request: Request,
+    file: UploadFile | None = File(None),
+    file_id: str | None = Form(None),
+    old_file_id: str | None = Form(None),
+    # 列选择
+    selected_columns: list[str] = Form([]),
+
+    # 4个多选筛选
+    selected_dsps: list[str] = Form([]),
+    selected_areas: list[str] = Form([]),
+    selected_drivers: list[str] = Form([]),
+    selected_statuses: list[str] = Form([]),
+):
+    # 1) 读取文件（首次上传 or 后续用 file_id）
+# 1) 读取文件（首次上传 or 后续用 file_id）
+    if file is not None:
+        MAX_UPLOAD_MB = 20
+        MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+
+        content = await file.read()
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise ValueError(f"File too large (>{MAX_UPLOAD_MB}MB).")
+
+        # 先保存新文件
+        file_id = save_file(content)
+
+        # ✅ 再删除旧 file（只在“上传新文件”时做）
+        if old_file_id and old_file_id in FILE_STORE:
+            info = FILE_STORE.pop(old_file_id, None)
+            if info:
+                path = info.get("path")
+                if path and os.path.exists(path):
+                    with suppress(Exception):
+                        os.remove(path)
+
+    else:
+        if not file_id:
+            raise ValueError("No file or file_id provided.")
+        content = load_file(file_id)
+
+    # 2) 读取 Excel
+    df = read_excel(content)
+    df["_orig_index"] = df.index.astype(int)
+
+    # 3) 生成筛选选项
+    dsp_options = unique_sorted(df, "DSP名称")
+    area_options = unique_sorted(df, "区域名称")
+    driver_options = unique_sorted(df, "司机名称")
+    status_options = unique_sorted(df, "运单状态")
+
+    # 4) 应用筛选
+    fdf = apply_filters(
+        df,
+        selected_dsps,
+        selected_areas,
+        selected_drivers,
+        selected_statuses,
+    )
+
+    # 5) 分组展示
+    grouped = []
+    show_cols = selected_columns or DEFAULT_COLUMNS
+
+    if "DSP名称" in fdf.columns:
+        for dsp, g in fdf.groupby("DSP名称", dropna=False):
+            g_show = select_columns(g, show_cols)
+            rows = [
+                [int(idx)] + row
+                for idx, row in zip(g["_orig_index"], g_show.values.tolist())
+            ]
+            grouped.append((dsp, rows))
+    else:
+        g_show = select_columns(fdf, show_cols)
+        rows = [
+            [int(idx)] + row
+            for idx, row in zip(fdf["_orig_index"], g_show.values.tolist())
+        ]
+        grouped.append(("ALL", rows))
+
+    display_headers = [
+        COLUMN_MAP.get(c, c) for c in show_cols if c in fdf.columns
+    ]
+
+    return templates.TemplateResponse(
+        "report.html",
+        {
+            "request": request,
+            "file_id": file_id,
+            "row_count": len(fdf),
+
+            "grouped": grouped,
+            "headers": display_headers,
+
+            "column_map": COLUMN_MAP,
+            "selected_columns": show_cols,
+
+            "dsp_options": dsp_options,
+            "area_options": area_options,
+            "driver_options": driver_options,
+            "status_options": status_options,
+
+            "selected_dsps": selected_dsps,
+            "selected_areas": selected_areas,
+            "selected_drivers": selected_drivers,
+            "selected_statuses": selected_statuses,
+        },
+    )
+
+@app.post("/export/excel")
+def export_excel(
+    file_id: str = Form(...),
+    selected_columns: list[str] = Form([]),
+    selected_dsps: list[str] = Form([]),
+    selected_areas: list[str] = Form([]),
+    selected_drivers: list[str] = Form([]),
+    selected_statuses: list[str] = Form([]),
+):
+    content = load_file(file_id)
+    df = read_excel(content)
+
+    fdf = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
+    fdf = select_columns(fdf, selected_columns or DEFAULT_COLUMNS)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Report"
+
+    headers = [COLUMN_MAP.get(c, c) for c in fdf.columns]
+    ws.append(headers)
+
+    for row in fdf.values.tolist():
+        ws.append(row)
+
+    bio = io.BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+
+    return StreamingResponse(
+        bio,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=report.xlsx"},
+    )
+@app.post("/export/pdf")
+def export_pdf(
+    file_id: str = Form(...),
+    selected_columns: list[str] = Form([]),
+    selected_dsps: list[str] = Form([]),
+    selected_areas: list[str] = Form([]),
+    selected_drivers: list[str] = Form([]),
+    selected_statuses: list[str] = Form([]),
+):
+    content = load_file(file_id)
+    df = read_excel(content)
+
+    fdf = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
+    fdf = select_columns(fdf, selected_columns or DEFAULT_COLUMNS)
+
+    headers = [COLUMN_MAP.get(c, c) for c in fdf.columns]
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(letter),
+        leftMargin=18, rightMargin=18, topMargin=18, bottomMargin=18
+    )
+    styles = getSampleStyleSheet()
+    title_style = styles["Heading3"]
+    title_style.fontName = PDF_FONT
+
+    story = []
+    groups = fdf.groupby("DSP名称", dropna=False) if "DSP名称" in fdf.columns else [("ALL", fdf)]
+
+    for dsp, g in groups:
+        story.append(Paragraph(f"DSP: {dsp}", title_style))
+        story.append(Spacer(1, 6))
+
+        data = [headers] + g.values.tolist()
+        table = Table(data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
+        ]))
+
+        story.append(table)
+        story.append(PageBreak())
+
+    doc.build(story)
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=report.pdf"},
+    )
+
+@app.post("/export/pdf_zip")
+def export_pdf_zip(
+    file_id: str = Form(...),
+    selected_columns: list[str] = Form([]),
+    selected_dsps: list[str] = Form([]),
+    selected_areas: list[str] = Form([]),
+    selected_drivers: list[str] = Form([]),
+    selected_statuses: list[str] = Form([]),
+):
+    content = load_file(file_id)
+    df = read_excel(content)
+
+    fdf = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
+    fdf = select_columns(fdf, selected_columns or DEFAULT_COLUMNS)
+    headers = [COLUMN_MAP.get(c, c) for c in fdf.columns]
+
+    groups = (
+        fdf.groupby("DSP名称", dropna=False)
+        if "DSP名称" in fdf.columns
+        else [("ALL", fdf)]
+    )
+
+    def safe_filename(name: str) -> str:
+        s = str(name or "DSP")
+        s = s.encode("ascii", "ignore").decode("ascii") or "DSP"
+        for ch in ['\\','/',':','*','?','"','<','>','|']:
+            s = s.replace(ch, "_")
+        return s[:60]
+
+    def set_pdf_meta(title: str):
+        def _cb(canvas, doc):
+            canvas.setTitle(title)
+            canvas.setAuthor("WMS Report")
+        return _cb
+
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        styles = getSampleStyleSheet()
+        title_style = styles["Heading3"]
+        title_style.fontName = PDF_FONT
+
+        for dsp, g in groups:
+            buf = io.BytesIO()
+            doc = SimpleDocTemplate(
+                buf,
+                pagesize=landscape(letter),
+                leftMargin=18, rightMargin=18,
+                topMargin=18, bottomMargin=18
+            )
+
+            story = []
+            story.append(Paragraph(f"DSP: {dsp}", title_style))
+            story.append(Spacer(1, 6))
+
+            data = [headers] + g.values.tolist()
+            table = Table(data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+            ]))
+            story.append(table)
+
+            doc.build(
+                story,
+                onFirstPage=set_pdf_meta(f"DSP: {dsp}"),
+                onLaterPages=set_pdf_meta(f"DSP: {dsp}")
+            )
+
+            buf.seek(0)
+            zf.writestr(f"{safe_filename(dsp)}.pdf", buf.read())
+
+    zip_buf.seek(0)
+    return StreamingResponse(
+        zip_buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=reports_by_dsp.zip"},
+    )

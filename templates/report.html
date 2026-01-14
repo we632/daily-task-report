@@ -1,0 +1,455 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Report Preview</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 18px; background: #fafafa; }
+    .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .col { min-width: 240px; flex: 1; }
+    label { font-size: 12px; color:#444; display:block; margin-bottom:6px; }
+    select { width: 100%; border:1px solid #ddd; border-radius: 8px; padding: 8px; }
+    .btn { border: 1px solid #222; background:#222; color:#fff; padding:8px 12px; border-radius: 8px; cursor:pointer; }
+    .btn.secondary { background:#fff; color:#222; }
+    .btnbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    
+
+
+
+    h2, h3 { margin: 0 0 10px; }
+    .meta { font-size: 12px; color:#666; }
+    /* DSP 列：强制左对齐（header + data） */
+/* ============ Professional UI polish ============ */
+:root{
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --border: #e6e8ef;
+  --text: #111827;
+  --muted: #6b7280;
+  --soft: #f3f4f6;
+  --shadow: 0 6px 18px rgba(17,24,39,.06);
+}
+
+body{
+  background: var(--bg);
+  color: var(--text);
+  margin: 18px;
+}
+
+.card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+/* header block 更紧凑 */
+h2{ margin: 0 0 6px; font-size: 18px; }
+h3{ margin: 0 0 10px; font-size: 15px; }
+.meta{ color: var(--muted); font-size: 12px; }
+
+/* 表单区域：两行布局更像 dashboard */
+.row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:flex-end;
+}
+
+.col{
+  min-width: 260px;
+  flex: 1;
+}
+
+/* label 更清晰 */
+label{
+  font-size: 12px;
+  color: var(--muted);
+  display:block;
+  margin-bottom:6px;
+}
+
+/* file input + button row 更好看 */
+.btnbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+/* 按钮统一 */
+.btn{
+  border: 1px solid #111827;
+  background:#111827;
+  color:#fff;
+  padding:9px 14px;
+  border-radius: 10px;
+  cursor:pointer;
+  font-weight: 600;
+  font-size: 12px;
+  transition: transform .05s ease, opacity .15s ease;
+}
+.btn:hover{ opacity:.92; }
+.btn:active{ transform: translateY(1px); }
+
+.btn.secondary{
+  background:#fff;
+  color:#111827;
+  border-color: var(--border);
+}
+
+/* 复选框区域更整齐 */
+.card .row > div[style*="min-width:200px"]{
+  min-width: 180px !important;
+}
+
+/* ============ Table polish ============ */
+table{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+}
+/* ✅ 表格外层：超过宽度就横向滚动 */
+.tableWrap{
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+}
+
+/* ✅ 表格不硬塞 100%，让它按内容决定宽度，但至少撑到容器宽 */
+.tableWrap table{
+  width: max-content;     /* 关键：列多时变宽 */
+  min-width: 100%;        /* 至少不小于容器 */
+}
+
+/* 可选：让单元格在窄屏别太挤 */
+.tableWrap th, .tableWrap td{
+  min-width: 140px;       /* 你可以按需要调 120/160 */
+}
+
+th, td{
+  padding: 10px 12px;
+  font-size: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.35;
+  text-align: left;
+}
+
+thead th{
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-weight: 700;
+  color: #111827;
+  border-bottom: 1px solid var(--border);
+}
+
+/* zebra + hover */
+tbody tr:nth-child(even){ background: #fcfcfd; }
+tbody tr:hover{ background: #f6f7fb; }
+
+/* 最后一行去边框更干净 */
+tbody tr:last-child td{ border-bottom: 0; }
+
+/* DSP 标题更像 section header */
+.dspTitle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin: 0 0 10px;
+}
+.dspBadge{
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--soft);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* ============ Choices.js polish ============ */
+.choices{
+  margin-bottom: 0;
+}
+.choices__inner{
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  min-height: 44px !important;
+  padding: 6px 10px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+.choices__list--multiple .choices__item{
+  border-radius: 999px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+.choices__input{
+  font-size: 12px !important;
+}
+.choices__list--dropdown{
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  overflow: hidden !important;
+}
+
+/* 顶部筛选区：别让四个框太扁 */
+select.ms{
+  min-height: 44px; /* 交给 Choices 渲染时也更舒服 */
+}
+/* ✅ 移除排序时排序列（如第一列）的背景灰色阴影 */
+table.dataTable.display tbody tr > .sorting_1, 
+table.dataTable.order-column.build tbody tr > .sorting_1 {
+    background-color: transparent !important;
+}
+
+/* ✅ 确保鼠标悬停时依然有正常的整行高亮效果 */
+table.dataTable.display tbody tr:hover > .sorting_1 {
+    background-color: #f6f7fb !important; /* 这里使用你之前定义的 hover 颜色 */
+}
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+</head>
+
+<body>
+  <div class="card">
+    <h2>Preview</h2>
+    <div class="meta">Rows: {{row_count}}</div>
+  </div>
+<div class="card">
+  <h3 style="margin:0 0 10px;">Change / Upload New File</h3>
+  <form action="/preview" method="post" enctype="multipart/form-data" class="btnbar">
+    <input type="hidden" name="old_file_id" value="{{file_id}}">
+
+    <input type="file" name="file" accept=".xlsx,.xls" required>
+    <!-- 保留当前筛选（可选：换文件后你也可以让筛选清空，这里先保留） -->
+    {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
+    {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
+    {% for v in selected_areas %}<input type="hidden" name="selected_areas" value="{{v}}">{% endfor %}
+    {% for v in selected_drivers %}<input type="hidden" name="selected_drivers" value="{{v}}">{% endfor %}
+    {% for v in selected_statuses %}<input type="hidden" name="selected_statuses" value="{{v}}">{% endfor %}
+    <button class="btn" type="submit">Load New File</button>
+  </form>
+</div>
+
+  <!-- Update Preview：不再上传文件，只传 file_id + 选择项 -->
+  <form class="card" action="/preview" method="post">
+    <input type="hidden" name="file_id" value="{{file_id}}">
+
+    <div class="row">
+      <div class="col">
+        <label>DSP (multi-select)</label>
+        <select class="ms" name="selected_dsps" multiple>
+          {% for v in dsp_options %}
+            <option value="{{v}}" {% if v in selected_dsps %}selected{% endif %}>{{v}}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col">
+        <label>Area (multi-select)</label>
+        <select class="ms" name="selected_areas" multiple>
+          {% for v in area_options %}
+            <option value="{{v}}" {% if v in selected_areas %}selected{% endif %}>{{v}}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col">
+        <label>Delivery Driver (multi-select)</label>
+        <select class="ms" name="selected_drivers" multiple>
+          {% for v in driver_options %}
+            <option value="{{v}}" {% if v in selected_drivers %}selected{% endif %}>{{v}}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col">
+        <label>Status (multi-select)</label>
+        <select class="ms" name="selected_statuses" multiple>
+          {% for v in status_options %}
+            <option value="{{v}}" {% if v in selected_statuses %}selected{% endif %}>{{v}}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <h3 style="margin-bottom:10px;">Columns</h3>
+      <div class="row">
+        {% for raw, label in column_map.items() %}
+          <div style="min-width:200px;">
+            <label>
+              <input type="checkbox" name="selected_columns" value="{{raw}}"
+                {% if raw in selected_columns %}checked{% endif %}>
+              {{label}}
+            </label>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="btnbar">
+      <button class="btn" type="submit">Update Preview</button>
+    </div>
+  </form>
+
+  <!-- 导出：只传 file_id + 当前选择项 -->
+  <div class="card">
+    <div class="btnbar">
+      <form action="/export/excel" method="post">
+        <input type="hidden" name="file_id" value="{{file_id}}">
+        {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
+        {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
+        {% for v in selected_areas %}<input type="hidden" name="selected_areas" value="{{v}}">{% endfor %}
+        {% for v in selected_drivers %}<input type="hidden" name="selected_drivers" value="{{v}}">{% endfor %}
+        {% for v in selected_statuses %}<input type="hidden" name="selected_statuses" value="{{v}}">{% endfor %}
+        <button class="btn" type="submit">Export Excel</button>
+      </form>
+
+      <form action="/export/pdf" method="post">
+        <input type="hidden" name="file_id" value="{{file_id}}">
+        {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
+        {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
+        {% for v in selected_areas %}<input type="hidden" name="selected_areas" value="{{v}}">{% endfor %}
+        {% for v in selected_drivers %}<input type="hidden" name="selected_drivers" value="{{v}}">{% endfor %}
+        {% for v in selected_statuses %}<input type="hidden" name="selected_statuses" value="{{v}}">{% endfor %}
+        <button class="btn secondary" type="submit">Export PDF</button>
+      </form>
+      <form action="/export/pdf_zip" method="post">
+        <input type="hidden" name="file_id" value="{{file_id}}">
+  {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
+  {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
+  {% for v in selected_areas %}<input type="hidden" name="selected_areas" value="{{v}}">{% endfor %}
+  {% for v in selected_drivers %}<input type="hidden" name="selected_drivers" value="{{v}}">{% endfor %}
+  {% for v in selected_statuses %}<input type="hidden" name="selected_statuses" value="{{v}}">{% endfor %}
+        <button class="btn secondary" type="submit">Export PDF (ZIP by DSP)</button>
+      </form>
+    </div>
+  </div>
+
+  {% for dsp, rows in grouped %}
+    <div class="card">
+    <div class="dspTitle">
+        <h3 style="margin:0;">DSP: {{dsp}}</h3>
+        <span class="dspBadge">{{ rows|length }} rows</span>
+    </div>
+
+    <div class="tableWrap">
+  <table id="table-{{ loop.index }}" class="dataTable-hook display nowrap">
+    <thead>
+      <tr>
+        <th style="display:none;">Index</th>
+        {% for h in headers %}<th>{{h}}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td style="display:none;">{{ r[0] }}</td>
+        {% for cell in r[1:] %}<td>{{cell}}</td>{% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+</div>
+
+  {% endfor %}
+  <script>
+  document.querySelectorAll('select.ms').forEach(el => {
+    new Choices(el, {
+      removeItemButton: true,     // 标签上显示×，点一下就取消
+      searchEnabled: true,        // 搜索框
+      searchResultLimit: 50,
+      shouldSort: false,
+      itemSelectText: '',         // 去掉 “Press to select” 提示
+      allowHTML: false
+    });
+  });
+</script>
+<script>
+// ✅ 核心逻辑：检测页面是否是通过“刷新”加载的
+  if (performance.getEntriesByType("navigation")[0].type === "reload") {
+      // 如果是刷新，直接跳转回首页
+      window.location.href = "/";
+  }
+
+  $(document).ready(function() {
+      // ... 你原有的 DataTable 初始化代码 ...
+  });
+$(document).ready(function() {
+  $('.dataTable-hook').each(function() {
+
+    var table = $(this).DataTable({
+      paging: true,
+      pageLength: 10,
+      searching: true,
+      ordering: true,
+      order: [[0, 'asc']], // ✅ 默认按隐藏的原始顺序排（= 初始顺序）
+      columnDefs: [
+        { targets: 0, visible: false, searchable: false }, // 隐藏 orig_index
+      ],
+      orderClasses: false,
+      scrollX: false,
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/1.13.7/i18n/zh-HANS.json"
+      }
+    });
+
+    // ✅ 三态点击：asc -> desc -> 原始顺序
+    var state = { col: null, step: 0 };
+
+    $(this).find('thead th').off('click.threetoggle').on('click.threetoggle', function(e) {
+      // DataTables 会自己监听 click，我们阻止它，自己控制
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      var col = $(this).index(); // 这里 index 对应可见 th 的位置；但我们有隐藏 th，所以要用 DataTables 的列索引
+      // 用 DataTables API 获取真实列索引（包含隐藏列）
+      var realCol = table.column(this).index();
+
+      // 不让用户点隐藏列（一般点不到，但保险）
+      if (realCol === 0) return;
+
+      if (state.col !== realCol) {
+        state.col = realCol;
+        state.step = 0;
+      }
+
+      state.step = (state.step + 1) % 3;
+
+      if (state.step === 1) table.order([realCol, 'asc']).draw();
+      else if (state.step === 2) table.order([realCol, 'desc']).draw();
+      else table.order([0, 'asc']).draw(); // 第三下：回到原始顺序
+    });
+
+  });
+});
+
+
+</script>
+</body>
+</html>
