@@ -9,9 +9,25 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-<style>
-/* ============ 1. 全局基础与变量 ============ */
-:root {
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 18px; background: #fafafa; }
+    .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .col { min-width: 240px; flex: 1; }
+    label { font-size: 12px; color:#444; display:block; margin-bottom:6px; }
+    select { width: 100%; border:1px solid #ddd; border-radius: 8px; padding: 8px; }
+    .btn { border: 1px solid #222; background:#222; color:#fff; padding:8px 12px; border-radius: 8px; cursor:pointer; }
+    .btn.secondary { background:#fff; color:#222; }
+    .btnbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    
+
+
+
+    h2, h3 { margin: 0 0 10px; }
+    .meta { font-size: 12px; color:#666; }
+    /* DSP 列：强制左对齐（header + data） */
+/* ============ Professional UI polish ============ */
+:root{
   --bg: #f6f7fb;
   --card: #ffffff;
   --border: #e6e8ef;
@@ -19,171 +35,199 @@
   --muted: #6b7280;
   --soft: #f3f4f6;
   --shadow: 0 6px 18px rgba(17,24,39,.06);
-  --primary: #111827;
 }
 
-body {
+body{
   background: var(--bg);
   color: var(--text);
   margin: 18px;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  line-height: 1.5;
 }
 
-/* ============ 2. 容器布局（修复断层的核心） ============ */
-.card {
+.card{
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 14px;
   box-shadow: var(--shadow);
-  width: auto;
-  position: relative;
-  /* 必须为 visible，否则下拉菜单和溢出内容会被截断造成“断层”感 */
-  overflow: visible; 
 }
 
-.row {
-  display: flex !important;
-  gap: 15px !important;
-  flex-wrap: wrap !important; /* 允许元素折行，防止重叠 */
-  align-items: flex-start;
+/* header block 更紧凑 */
+h2{ margin: 0 0 6px; font-size: 18px; }
+h3{ margin: 0 0 10px; font-size: 15px; }
+.meta{ color: var(--muted); font-size: 12px; }
+
+/* 表单区域：两行布局更像 dashboard */
+.row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:flex-end;
 }
 
-.col {
+.col{
   min-width: 260px;
   flex: 1;
 }
 
-/* 复选框区域的垂直间距 */
-.card .row > div {
-  margin-bottom: 10px;
-}
-
-/* ============ 3. UI 元素 (按钮、标题、标签) ============ */
-h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
-h3 { margin: 0 0 10px; font-size: 15px; }
-.meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
-
-label {
+/* label 更清晰 */
+label{
   font-size: 12px;
   color: var(--muted);
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
+  display:block;
+  margin-bottom:6px;
 }
 
-.btnbar {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
+/* file input + button row 更好看 */
+.btnbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
 }
 
-.btn {
-  border: 1px solid var(--primary);
-  background: var(--primary);
-  color: #fff;
-  padding: 9px 14px;
+/* 按钮统一 */
+.btn{
+  border: 1px solid #111827;
+  background:#111827;
+  color:#fff;
+  padding:9px 14px;
   border-radius: 10px;
-  cursor: pointer;
+  cursor:pointer;
   font-weight: 600;
   font-size: 12px;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
+  transition: transform .05s ease, opacity .15s ease;
+}
+.btn:hover{ opacity:.92; }
+.btn:active{ transform: translateY(1px); }
+
+.btn.secondary{
+  background:#fff;
+  color:#111827;
+  border-color: var(--border);
 }
 
-.btn:hover { opacity: .9; transform: translateY(-1px); }
-.btn:active { transform: translateY(1px); }
-.btn.secondary { background: #fff; color: var(--primary); border-color: var(--border); }
+/* 复选框区域更整齐 */
+.card .row > div[style*="min-width:200px"]{
+  min-width: 180px !important;
+}
 
-select {
+/* ============ Table polish ============ */
+table{
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
-  background: #fff;
-  min-height: 44px;
-}
-
-/* ============ 4. 表格美化与 DataTables 修复 ============ */
-.tableWrap {
-  width: 100%;
-  overflow-x: auto; /* 允许横向滚动 */
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid var(--border);
-  margin-top: 10px;
-}
-
-table {
-  width: 100% !important;
   border-collapse: separate;
   border-spacing: 0;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+}
+/* ✅ 表格外层：超过宽度就横向滚动 */
+.tableWrap{
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
 }
 
+/* ✅ 表格不硬塞 100%，让它按内容决定宽度，但至少撑到容器宽 */
+.tableWrap table{
+  width: max-content;     /* 关键：列多时变宽 */
+  min-width: 100%;        /* 至少不小于容器 */
+}
 
-th, td {
+/* 可选：让单元格在窄屏别太挤 */
+.tableWrap th, .tableWrap td{
+  min-width: 140px;       /* 你可以按需要调 120/160 */
+}
+
+th, td{
   padding: 10px 12px;
   font-size: 12px;
   vertical-align: middle;
   border-bottom: 1px solid var(--border);
-  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.35;
   text-align: left;
 }
 
-thead th {
+thead th{
   background: #f8fafc;
-  z-index: 10;
+  position: sticky;
+  top: 0;
+  z-index: 2;
   font-weight: 700;
-  color: var(--primary);
+  color: #111827;
+  border-bottom: 1px solid var(--border);
 }
 
-/* 斑马纹与排序列背景修复 */
-tbody tr:nth-child(even) { background: #fcfcfd; }
-tbody tr:hover, tbody tr:hover > .sorting_1 { background: #f6f7fb !important; }
+/* zebra + hover */
+tbody tr:nth-child(even){ background: #fcfcfd; }
+tbody tr:hover{ background: #f6f7fb; }
 
-/* 彻底移除 DataTables 自动加的排序列灰色背景 */
-table.dataTable.display tbody tr > .sorting_1, 
-table.dataTable.order-column.build tbody tr > .sorting_1 {
-    background-color: transparent !important;
+/* 最后一行去边框更干净 */
+tbody tr:last-child td{ border-bottom: 0; }
+
+/* DSP 标题更像 section header */
+.dspTitle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin: 0 0 10px;
+}
+.dspBadge{
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--soft);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 999px;
 }
 
-/* ============ 5. 第三方插件样式 (Choices.js) ============ */
-.choices__inner {
+/* ============ Choices.js polish ============ */
+.choices{
+  margin-bottom: 0;
+}
+.choices__inner{
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
   min-height: 44px !important;
   padding: 6px 10px !important;
   background: #fff !important;
+  box-shadow: none !important;
 }
-
-.choices__list--multiple .choices__item {
+.choices__list--multiple .choices__item{
   border-radius: 999px !important;
-  background-color: var(--primary) !important;
-  border: none !important;
-  padding: 4px 10px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+.choices__input{
+  font-size: 12px !important;
+}
+.choices__list--dropdown{
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  overflow: hidden !important;
 }
 
-/* ============ 6. 其他辅助组件 ============ */
-.dspTitle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
+/* 顶部筛选区：别让四个框太扁 */
+select.ms{
+  min-height: 44px; /* 交给 Choices 渲染时也更舒服 */
+}
+/* ✅ 移除排序时排序列（如第一列）的背景灰色阴影 */
+table.dataTable.display tbody tr > .sorting_1, 
+table.dataTable.order-column.build tbody tr > .sorting_1 {
+    background-color: transparent !important;
 }
 
-.dspBadge {
-  font-size: 12px;
-  color: var(--muted);
-  background: var(--soft);
-  border: 1px solid var(--border);
-  padding: 4px 12px;
-  border-radius: 99px;
+/* ✅ 确保鼠标悬停时依然有正常的整行高亮效果 */
+table.dataTable.display tbody tr:hover > .sorting_1 {
+    background-color: #f6f7fb !important; /* 这里使用你之前定义的 hover 颜色 */
 }
-</style>
+  </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
@@ -369,7 +413,7 @@ $(document).ready(function() {
         { targets: 0, visible: false, searchable: false }, // 隐藏 orig_index
       ],
       orderClasses: false,
-      scrollX: true,
+      scrollX: false,
       language: {
         url: "https://cdn.datatables.net/plug-ins/1.13.7/i18n/zh-HANS.json"
       }
