@@ -10,7 +10,7 @@
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
 <style>
-/* ============ 1. 核心变量与全局设置 ============ */
+/* ============ 1. 全局基础与变量 ============ */
 :root {
   --bg: #f6f7fb;
   --card: #ffffff;
@@ -30,7 +30,7 @@ body {
   line-height: 1.5;
 }
 
-/* ============ 2. 容器组件 (修复断层与重叠) ============ */
+/* ============ 2. 容器布局（修复断层的核心） ============ */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -40,14 +40,14 @@ body {
   box-shadow: var(--shadow);
   width: auto;
   position: relative;
-  /* 允许内容在必要时溢出滚动，而不是强行重叠 */
+  /* 必须为 visible，否则下拉菜单和溢出内容会被截断造成“断层”感 */
   overflow: visible; 
 }
 
 .row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap; /* 关键：自动换行防止断层 */
+  display: flex !important;
+  gap: 15px !important;
+  flex-wrap: wrap !important; /* 允许元素折行，防止重叠 */
   align-items: flex-start;
 }
 
@@ -56,12 +56,12 @@ body {
   flex: 1;
 }
 
-/* 复选框/选择项垂直间距 */
+/* 复选框区域的垂直间距 */
 .card .row > div {
   margin-bottom: 10px;
 }
 
-/* ============ 3. 标题与文字 ============ */
+/* ============ 3. UI 元素 (按钮、标题、标签) ============ */
 h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
 h3 { margin: 0 0 10px; font-size: 15px; }
 .meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
@@ -74,7 +74,6 @@ label {
   font-weight: 500;
 }
 
-/* ============ 4. 交互元素 (按钮与输入框) ============ */
 .btnbar {
   display: flex;
   gap: 10px;
@@ -91,12 +90,12 @@ label {
   cursor: pointer;
   font-weight: 600;
   font-size: 12px;
-  transition: transform .05s ease, opacity .15s ease;
+  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
 }
 
-.btn:hover { opacity: .92; }
+.btn:hover { opacity: .9; transform: translateY(-1px); }
 .btn:active { transform: translateY(1px); }
 .btn.secondary { background: #fff; color: var(--primary); border-color: var(--border); }
 
@@ -109,7 +108,7 @@ select {
   min-height: 44px;
 }
 
-/* ============ 5. 表格专业美化 (Table & DataTables) ============ */
+/* ============ 4. 表格美化与 DataTables 修复 ============ */
 .tableWrap {
   width: 100%;
   overflow-x: auto; /* 允许横向滚动 */
@@ -123,10 +122,9 @@ table {
   width: 100% !important;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: auto;
 }
 
-/* 让多列报表横向延伸，不硬挤 */
+/* 当列非常多时，让表格横向延伸，而不是挤瘪单元格 */
 .tableWrap table {
   width: max-content !important;
   min-width: 100%;
@@ -137,32 +135,30 @@ th, td {
   font-size: 12px;
   vertical-align: middle;
   border-bottom: 1px solid var(--border);
-  white-space: nowrap; /* 保持内容不换行，防止高度错位 */
+  white-space: nowrap; 
   text-align: left;
 }
 
-/* 粘性表头 */
 thead th {
   background: #f8fafc;
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 10;
   font-weight: 700;
   color: var(--primary);
-  border-bottom: 1px solid var(--border);
 }
 
-/* 斑马纹与悬停 */
+/* 斑马纹与排序列背景修复 */
 tbody tr:nth-child(even) { background: #fcfcfd; }
 tbody tr:hover, tbody tr:hover > .sorting_1 { background: #f6f7fb !important; }
 
-/* 移除 DataTables 默认排序列的灰色背景 */
+/* 彻底移除 DataTables 自动加的排序列灰色背景 */
 table.dataTable.display tbody tr > .sorting_1, 
 table.dataTable.order-column.build tbody tr > .sorting_1 {
     background-color: transparent !important;
 }
 
-/* ============ 6. 第三方插件样式适配 (Choices.js) ============ */
+/* ============ 5. 第三方插件样式 (Choices.js) ============ */
 .choices__inner {
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
@@ -173,19 +169,12 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
 
 .choices__list--multiple .choices__item {
   border-radius: 999px !important;
-  padding: 4px 8px !important;
-  font-size: 12px !important;
   background-color: var(--primary) !important;
   border: none !important;
+  padding: 4px 10px !important;
 }
 
-.choices__list--dropdown {
-  border-radius: 12px !important;
-  border: 1px solid var(--border) !important;
-  overflow: hidden !important;
-}
-
-/* ============ 7. 辅助组件 ============ */
+/* ============ 6. 其他辅助组件 ============ */
 .dspTitle {
   display: flex;
   align-items: center;
@@ -198,8 +187,8 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
   color: var(--muted);
   background: var(--soft);
   border: 1px solid var(--border);
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 4px 12px;
+  border-radius: 99px;
 }
 </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
