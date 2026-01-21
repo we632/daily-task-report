@@ -49,8 +49,16 @@ COLUMN_ALIASES = {
     "仓库名称": ["仓库名称", "仓库", "Warehouse", "WH"],
 }
 
-# 自动生成用于前端显示的映射 (例如 "运单号" -> "Tracking No.")
-COLUMN_MAP = {k: v[1] if len(v) > 1 else k for k, v in COLUMN_ALIASES.items()}
+# 这样可以确保无论 Excel 里叫什么，网页上显示的永远是列表里的第一个英文名
+COLUMN_MAP = {
+    "运单号": "Tracking No.",
+    "DSP名称": "DSP Name",
+    "区域名称": "Area",
+    "司机名称": "Driver",
+    "任务日期": "Date",
+    "运单状态": "Status",
+    "仓库名称": "Warehouse",
+}
 
 # 默认选中的列（使用标准名）
 DEFAULT_COLUMNS = ["运单号", "DSP名称", "区域名称", "司机名称", "任务日期", "运单状态"]

@@ -43,13 +43,17 @@ body{
   margin: 18px;
 }
 
-.card{
+.card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 14px;
   box-shadow: var(--shadow);
+  /* 新增：防止内容溢出导致重叠 */
+  width: auto; 
+  overflow: hidden; 
+  position: relative;
 }
 
 /* header block 更紧凑 */
@@ -57,12 +61,11 @@ h2{ margin: 0 0 6px; font-size: 18px; }
 h3{ margin: 0 0 10px; font-size: 15px; }
 .meta{ color: var(--muted); font-size: 12px; }
 
-/* 表单区域：两行布局更像 dashboard */
-.row{
-  display:flex;
-  gap:12px;
-  flex-wrap:wrap;
-  align-items:flex-end;
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap; /* 确保能自动换行 */
+  align-items: flex-start; /* 建议改为 flex-start，防止不同高度的元素被拉伸重叠 */
 }
 
 .col{
@@ -108,8 +111,8 @@ label{
 }
 
 /* 复选框区域更整齐 */
-.card .row > div[style*="min-width:200px"]{
-  min-width: 180px !important;
+.card .row > div {
+  margin-bottom: 10px; /* 给折行留出垂直间距 */
 }
 
 /* ============ Table polish ============ */
@@ -122,12 +125,11 @@ table{
   border-radius:12px;
   overflow:hidden;
 }
-/* ✅ 表格外层：超过宽度就横向滚动 */
-.tableWrap{
+.tableWrap {
   width: 100%;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 12px;
+  /* 确保表格不会溢出卡片 */
+  max-width: 100%; 
 }
 
 /* ✅ 表格不硬塞 100%，让它按内容决定宽度，但至少撑到容器宽 */
