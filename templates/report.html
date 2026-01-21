@@ -9,25 +9,9 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 18px; background: #fafafa; }
-    .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-    .row { display:flex; gap:12px; flex-wrap:wrap; }
-    .col { min-width: 240px; flex: 1; }
-    label { font-size: 12px; color:#444; display:block; margin-bottom:6px; }
-    select { width: 100%; border:1px solid #ddd; border-radius: 8px; padding: 8px; }
-    .btn { border: 1px solid #222; background:#222; color:#fff; padding:8px 12px; border-radius: 8px; cursor:pointer; }
-    .btn.secondary { background:#fff; color:#222; }
-    .btnbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    
-
-
-
-    h2, h3 { margin: 0 0 10px; }
-    .meta { font-size: 12px; color:#666; }
-    /* DSP 列：强制左对齐（header + data） */
-/* ============ Professional UI polish ============ */
-:root{
+<style>
+/* ============ 1. 核心变量与全局设置 ============ */
+:root {
   --bg: #f6f7fb;
   --card: #ffffff;
   --border: #e6e8ef;
@@ -35,14 +19,18 @@
   --muted: #6b7280;
   --soft: #f3f4f6;
   --shadow: 0 6px 18px rgba(17,24,39,.06);
+  --primary: #111827;
 }
 
-body{
+body {
   background: var(--bg);
   color: var(--text);
   margin: 18px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  line-height: 1.5;
 }
 
+/* ============ 2. 容器组件 (修复断层与重叠) ============ */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -50,137 +38,162 @@ body{
   padding: 16px;
   margin-bottom: 14px;
   box-shadow: var(--shadow);
-  /* 新增：防止内容溢出导致重叠 */
-  width: auto; 
-  overflow: hidden; 
+  width: auto;
   position: relative;
+  /* 允许内容在必要时溢出滚动，而不是强行重叠 */
+  overflow: visible; 
 }
-
-/* header block 更紧凑 */
-h2{ margin: 0 0 6px; font-size: 18px; }
-h3{ margin: 0 0 10px; font-size: 15px; }
-.meta{ color: var(--muted); font-size: 12px; }
 
 .row {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap; /* 确保能自动换行 */
-  align-items: flex-start; /* 建议改为 flex-start，防止不同高度的元素被拉伸重叠 */
+  flex-wrap: wrap; /* 关键：自动换行防止断层 */
+  align-items: flex-start;
 }
 
-.col{
+.col {
   min-width: 260px;
   flex: 1;
 }
 
-/* label 更清晰 */
-label{
+/* 复选框/选择项垂直间距 */
+.card .row > div {
+  margin-bottom: 10px;
+}
+
+/* ============ 3. 标题与文字 ============ */
+h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
+h3 { margin: 0 0 10px; font-size: 15px; }
+.meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+
+label {
   font-size: 12px;
   color: var(--muted);
-  display:block;
-  margin-bottom:6px;
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
 }
 
-/* file input + button row 更好看 */
-.btnbar{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
+/* ============ 4. 交互元素 (按钮与输入框) ============ */
+.btnbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-/* 按钮统一 */
-.btn{
-  border: 1px solid #111827;
-  background:#111827;
-  color:#fff;
-  padding:9px 14px;
+.btn {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+  padding: 9px 14px;
   border-radius: 10px;
-  cursor:pointer;
+  cursor: pointer;
   font-weight: 600;
   font-size: 12px;
   transition: transform .05s ease, opacity .15s ease;
-}
-.btn:hover{ opacity:.92; }
-.btn:active{ transform: translateY(1px); }
-
-.btn.secondary{
-  background:#fff;
-  color:#111827;
-  border-color: var(--border);
+  display: inline-flex;
+  align-items: center;
 }
 
-/* 复选框区域更整齐 */
-.card .row > div {
-  margin-bottom: 10px; /* 给折行留出垂直间距 */
-}
+.btn:hover { opacity: .92; }
+.btn:active { transform: translateY(1px); }
+.btn.secondary { background: #fff; color: var(--primary); border-color: var(--border); }
 
-/* ============ Table polish ============ */
-table{
+select {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:12px;
-  overflow:hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+  min-height: 44px;
 }
+
+/* ============ 5. 表格专业美化 (Table & DataTables) ============ */
 .tableWrap {
   width: 100%;
-  overflow-x: auto;
-  /* 确保表格不会溢出卡片 */
-  max-width: 100%; 
+  overflow-x: auto; /* 允许横向滚动 */
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  margin-top: 10px;
 }
 
-/* ✅ 表格不硬塞 100%，让它按内容决定宽度，但至少撑到容器宽 */
-.tableWrap table{
-  width: max-content;     /* 关键：列多时变宽 */
-  min-width: 100%;        /* 至少不小于容器 */
+table {
+  width: 100% !important;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
 }
 
-/* 可选：让单元格在窄屏别太挤 */
-.tableWrap th, .tableWrap td{
-  min-width: 140px;       /* 你可以按需要调 120/160 */
+/* 让多列报表横向延伸，不硬挤 */
+.tableWrap table {
+  width: max-content !important;
+  min-width: 100%;
 }
 
-th, td{
+th, td {
   padding: 10px 12px;
   font-size: 12px;
   vertical-align: middle;
   border-bottom: 1px solid var(--border);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.35;
+  white-space: nowrap; /* 保持内容不换行，防止高度错位 */
   text-align: left;
 }
 
-thead th{
+/* 粘性表头 */
+thead th {
   background: #f8fafc;
   position: sticky;
   top: 0;
   z-index: 2;
   font-weight: 700;
-  color: #111827;
+  color: var(--primary);
   border-bottom: 1px solid var(--border);
 }
 
-/* zebra + hover */
-tbody tr:nth-child(even){ background: #fcfcfd; }
-tbody tr:hover{ background: #f6f7fb; }
+/* 斑马纹与悬停 */
+tbody tr:nth-child(even) { background: #fcfcfd; }
+tbody tr:hover, tbody tr:hover > .sorting_1 { background: #f6f7fb !important; }
 
-/* 最后一行去边框更干净 */
-tbody tr:last-child td{ border-bottom: 0; }
-
-/* DSP 标题更像 section header */
-.dspTitle{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin: 0 0 10px;
+/* 移除 DataTables 默认排序列的灰色背景 */
+table.dataTable.display tbody tr > .sorting_1, 
+table.dataTable.order-column.build tbody tr > .sorting_1 {
+    background-color: transparent !important;
 }
-.dspBadge{
+
+/* ============ 6. 第三方插件样式适配 (Choices.js) ============ */
+.choices__inner {
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  min-height: 44px !important;
+  padding: 6px 10px !important;
+  background: #fff !important;
+}
+
+.choices__list--multiple .choices__item {
+  border-radius: 999px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  background-color: var(--primary) !important;
+  border: none !important;
+}
+
+.choices__list--dropdown {
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  overflow: hidden !important;
+}
+
+/* ============ 7. 辅助组件 ============ */
+.dspTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.dspBadge {
   font-size: 12px;
   color: var(--muted);
   background: var(--soft);
@@ -188,48 +201,7 @@ tbody tr:last-child td{ border-bottom: 0; }
   padding: 4px 10px;
   border-radius: 999px;
 }
-
-/* ============ Choices.js polish ============ */
-.choices{
-  margin-bottom: 0;
-}
-.choices__inner{
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  min-height: 44px !important;
-  padding: 6px 10px !important;
-  background: #fff !important;
-  box-shadow: none !important;
-}
-.choices__list--multiple .choices__item{
-  border-radius: 999px !important;
-  padding: 4px 8px !important;
-  font-size: 12px !important;
-}
-.choices__input{
-  font-size: 12px !important;
-}
-.choices__list--dropdown{
-  border-radius: 12px !important;
-  border: 1px solid var(--border) !important;
-  overflow: hidden !important;
-}
-
-/* 顶部筛选区：别让四个框太扁 */
-select.ms{
-  min-height: 44px; /* 交给 Choices 渲染时也更舒服 */
-}
-/* ✅ 移除排序时排序列（如第一列）的背景灰色阴影 */
-table.dataTable.display tbody tr > .sorting_1, 
-table.dataTable.order-column.build tbody tr > .sorting_1 {
-    background-color: transparent !important;
-}
-
-/* ✅ 确保鼠标悬停时依然有正常的整行高亮效果 */
-table.dataTable.display tbody tr:hover > .sorting_1 {
-    background-color: #f6f7fb !important; /* 这里使用你之前定义的 hover 颜色 */
-}
-  </style>
+</style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 

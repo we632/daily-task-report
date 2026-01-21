@@ -41,9 +41,9 @@ templates = Jinja2Templates(directory="templates")
 # Key 是代码内部使用的“标准名”，Value 是 Excel 中可能出现的表头别名
 COLUMN_ALIASES = {
     "运单号": ["运单号", "Tracking No.", "Tracking Number", "TrackingNo", "Waybill"],
-    "DSP名称": ["DSP名称", "DSP", "DSP Name", "配送商"],
+    "DSP名称": ["DSP名称", "DSP", "DSP Name", "dsp_name"],
     "区域名称": ["区域名称", "区域", "Area", "Zone"],
-    "司机名称": ["司机名称", "司机", "Delivery Driver", "Driver Name"],
+    "司机名称": ["司机名称", "name", "Delivery Driver", "Driver Name"],
     "任务日期": ["任务日期", "日期", "Task Date", "Date"],
     "运单状态": ["运单状态", "状态", "Status"],
     "仓库名称": ["仓库名称", "仓库", "Warehouse", "WH"],
