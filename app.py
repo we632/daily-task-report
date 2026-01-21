@@ -37,18 +37,36 @@ async def cleanup_loop():
 
 templates = Jinja2Templates(directory="templates")
 
-# ============ 配置 ============
-COLUMN_MAP = {
-    "运单号": "Tracking No.",
-    "DSP名称": "DSP",
-    "区域名称": "Area",
-    "司机名称": "Delivery Driver",
-    "任务日期": "Task Date",
-    "运单状态": "Status",
-    "仓库名称": "Warehouse",
+# ============ 增强版配置（支持别名匹配） ============
+# Key 是代码内部使用的“标准名”，Value 是 Excel 中可能出现的表头别名
+COLUMN_ALIASES = {
+    "运单号": ["运单号", "Tracking No.", "Tracking Number", "TrackingNo", "Waybill"],
+    "DSP名称": ["DSP名称", "DSP", "DSP Name", "配送商"],
+    "区域名称": ["区域名称", "区域", "Area", "Zone"],
+    "司机名称": ["司机名称", "司机", "Delivery Driver", "Driver Name"],
+    "任务日期": ["任务日期", "日期", "Task Date", "Date"],
+    "运单状态": ["运单状态", "状态", "Status"],
+    "仓库名称": ["仓库名称", "仓库", "Warehouse", "WH"],
 }
 
+# 自动生成用于前端显示的映射 (例如 "运单号" -> "Tracking No.")
+COLUMN_MAP = {k: v[1] if len(v) > 1 else k for k, v in COLUMN_ALIASES.items()}
+
+# 默认选中的列（使用标准名）
 DEFAULT_COLUMNS = ["运单号", "DSP名称", "区域名称", "司机名称", "任务日期", "运单状态"]
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    扫描 Excel 列名，如果匹配到别名，则统一重命名为标准中文名
+    """
+    rename_dict = {}
+    for col in df.columns:
+        col_str = str(col).strip()
+        for standard_name, aliases in COLUMN_ALIASES.items():
+            if col_str in aliases:
+                rename_dict[col] = standard_name
+                break
+    return df.rename(columns=rename_dict)
 
 # 上传文件内存缓存：file_id -> {"bytes":..., "ts":...}
 # 临时文件缓存：file_id -> {"path":..., "ts":..., "size":...}
@@ -97,6 +115,11 @@ def load_file(file_id: str) -> bytes:
 
 def read_excel(upload_bytes: bytes) -> pd.DataFrame:
     df = pd.read_excel(io.BytesIO(upload_bytes), sheet_name=0)
+    
+    # --- 新增这一行 ---
+    df = normalize_columns(df) 
+    # -----------------
+
     df = df.dropna(how="all")
     df = df.fillna("")
     df = df.loc[~(df.astype(str).apply(lambda r: (r.str.strip() == "").all(), axis=1))]
