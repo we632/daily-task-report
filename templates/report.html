@@ -124,11 +124,6 @@ table {
   border-spacing: 0;
 }
 
-/* 当列非常多时，让表格横向延伸，而不是挤瘪单元格 */
-.tableWrap table {
-  width: max-content !important;
-  min-width: 100%;
-}
 
 th, td {
   padding: 10px 12px;
@@ -374,7 +369,7 @@ $(document).ready(function() {
         { targets: 0, visible: false, searchable: false }, // 隐藏 orig_index
       ],
       orderClasses: false,
-      scrollX: false,
+      scrollX: true,
       language: {
         url: "https://cdn.datatables.net/plug-ins/1.13.7/i18n/zh-HANS.json"
       }
