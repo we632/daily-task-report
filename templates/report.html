@@ -183,6 +183,42 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
   padding: 4px 12px;
   border-radius: 99px;
 }
+/* ✅ 让每个 DSP 的表整体宽度一致 */
+.tableWrap .dataTables_wrapper { 
+  width: 100%;
+}
+
+/* ✅ 让表格按容器宽度布局，列宽更稳定 */
+.tableWrap table.dataTable {
+  width: 100% !important;
+  table-layout: fixed;   /* 关键：固定布局，避免每张表算出来不一样 */
+}
+
+/* ✅ 表头/单元格统一左对齐（你现在虽然是 left，但 DT 会覆盖） */
+.tableWrap table.dataTable thead th,
+.tableWrap table.dataTable tbody td {
+  text-align: left !important;
+}
+
+/* ✅ 允许内容省略，避免某列把整张表撑歪（Tracking No. 很长） */
+.tableWrap table.dataTable thead th,
+.tableWrap table.dataTable tbody td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ✅ 让 Show / Search / 分页区在每张表里对齐一致 */
+.tableWrap .dataTables_length,
+.tableWrap .dataTables_filter,
+.tableWrap .dataTables_info,
+.tableWrap .dataTables_paginate {
+  padding: 10px 12px;
+}
+
+.tableWrap .dataTables_filter { text-align: right; }
+.tableWrap .dataTables_filter input { margin-left: 8px; }
+
 </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
@@ -370,6 +406,8 @@ $(document).ready(function() {
         { targets: 0, visible: false, searchable: false }, // 隐藏 orig_index
       ],
       orderClasses: false,
+      autoWidth: false,      // ✅ 关键：不要让 DT 每张表自己算宽度
+      responsive: false,     // ✅ 保持简单一致（没引入 responsive 插件也没关系）
       scrollX: true,
       language: {
         url: "https://cdn.datatables.net/plug-ins/1.13.7/i18n/zh-HANS.json"
