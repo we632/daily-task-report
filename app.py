@@ -163,6 +163,32 @@ def select_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     return df[cols].copy()
 
 
+def build_report_date_label(df: pd.DataFrame) -> str:
+    """
+    从筛选后的数据里提取任务日期，生成可用于标题/文件名的日期标签。
+    """
+    if "任务日期" not in df.columns:
+        return "unknown-date"
+
+    dates = (
+        df["任务日期"]
+        .astype(str)
+        .str.strip()
+        .replace("", pd.NA)
+        .dropna()
+        .unique()
+        .tolist()
+    )
+
+    if not dates:
+        return "unknown-date"
+
+    dates = sorted(dates)
+    if len(dates) == 1:
+        return dates[0]
+    return f"{dates[0]}_to_{dates[-1]}"
+
+
 @app.on_event("startup")
 async def _startup():
     asyncio.create_task(cleanup_loop())
@@ -394,8 +420,10 @@ def export_pdf_zip(
     content = load_file(file_id)
     df = read_excel(content)
 
-    fdf = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
-    fdf = select_columns(fdf, selected_columns or DEFAULT_COLUMNS)
+    filtered_df = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
+    report_date_label = build_report_date_label(filtered_df)
+
+    fdf = select_columns(filtered_df, selected_columns or DEFAULT_COLUMNS)
     headers = [COLUMN_MAP.get(c, c) for c in fdf.columns]
 
     groups = (
@@ -446,14 +474,18 @@ def export_pdf_zip(
             ]))
             story.append(table)
 
+            report_title = f"DSP: {dsp} | Date: {report_date_label}"
             doc.build(
                 story,
-                onFirstPage=set_pdf_meta(f"DSP: {dsp}"),
-                onLaterPages=set_pdf_meta(f"DSP: {dsp}")
+                onFirstPage=set_pdf_meta(report_title),
+                onLaterPages=set_pdf_meta(report_title)
             )
 
             buf.seek(0)
-            zf.writestr(f"{safe_filename(dsp)}.pdf", buf.read())
+            zf.writestr(
+                f"{safe_filename(dsp)}_{safe_filename(report_date_label)}.pdf",
+                buf.read(),
+            )
 
     zip_buf.seek(0)
     return StreamingResponse(
