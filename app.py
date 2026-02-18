@@ -45,7 +45,7 @@ COLUMN_ALIASES = {
     "区域名称": ["区域名称", "区域", "Area", "Zone"],
     "司机名称": ["司机名称", "name", "Delivery Driver", "Driver Name", "Driver", "最后一次操作司机"],
     "任务日期": ["任务日期", "日期", "Task Date", "Date"],
-    "运单状态": ["运单状态", "状态", "Status"],
+    "运单状态": ["运单状态", "状态", "Status", "订单状态"],
     "仓库名称": ["仓库名称", "仓库", "Warehouse", "WH"],
 }
 
@@ -457,6 +457,14 @@ def export_pdf_zip(
     filtered_df = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
     report_date_display, report_date_safe = build_report_date_label(filtered_df)
 
+    if "DSP名称" in filtered_df.columns:
+        dsp_date_labels = {
+            dsp: build_report_date_label(group_df)
+            for dsp, group_df in filtered_df.groupby("DSP名称", dropna=False)
+        }
+    else:
+        dsp_date_labels = {"ALL": build_report_date_label(filtered_df)}
+
     fdf = select_columns(filtered_df, selected_columns or DEFAULT_COLUMNS)
     headers = [COLUMN_MAP.get(c, c) for c in fdf.columns]
 
@@ -494,8 +502,12 @@ def export_pdf_zip(
                 topMargin=18, bottomMargin=18
             )
 
+            dsp_date_display, dsp_date_safe = dsp_date_labels.get(
+                dsp, (report_date_display, report_date_safe)
+            )
+
             story = []
-            story.append(Paragraph(f"DSP: {dsp}", title_style))
+            story.append(Paragraph(f"DSP: {dsp} | Date: {dsp_date_display}", title_style))
             story.append(Spacer(1, 6))
 
             data = [headers] + g.values.tolist()
@@ -508,6 +520,7 @@ def export_pdf_zip(
             ]))
             story.append(table)
 
+            report_title = f"DSP: {dsp} | Date: {dsp_date_display}"
             report_title = f"DSP: {dsp} | Date: {report_date_display}"
             doc.build(
                 story,
@@ -517,6 +530,7 @@ def export_pdf_zip(
 
             buf.seek(0)
             zf.writestr(
+                f"{safe_filename(dsp)}_{safe_filename(dsp_date_safe)}.pdf",
                 f"{safe_filename(dsp)}_{safe_filename(report_date_safe)}.pdf",
                 buf.read(),
             )
