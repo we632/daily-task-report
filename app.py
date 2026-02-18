@@ -500,56 +500,64 @@ def export_pdf_zip(
             canvas.setAuthor("WMS Report")
         return _cb
 
-    zip_buf = io.BytesIO()
+    def build_zip_bytes(compression_method: int) -> bytes:
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w", compression=compression_method) as zf:
+            styles = getSampleStyleSheet()
+            title_style = styles["Heading3"]
+            title_style.fontName = PDF_FONT
+
+            for dsp, g in groups:
+                buf = io.BytesIO()
+                doc = SimpleDocTemplate(
+                    buf,
+                    pagesize=landscape(letter),
+                    leftMargin=18, rightMargin=18,
+                    topMargin=18, bottomMargin=18
+                )
+
+                dsp_date_display, dsp_date_safe = dsp_date_labels.get(
+                    dsp, (report_date_display, report_date_safe)
+                )
+
+                story = []
+                story.append(Paragraph(f"DSP: {dsp} | Date: {dsp_date_display}", title_style))
+                story.append(Spacer(1, 6))
+
+                data = [headers] + g.values.tolist()
+                table = Table(data, repeatRows=1)
+                table.setStyle(TableStyle([
+                    ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+                ]))
+                story.append(table)
+
+                report_title = f"DSP: {dsp} | Date: {dsp_date_display}"
+                doc.build(
+                    story,
+                    onFirstPage=set_pdf_meta(report_title),
+                    onLaterPages=set_pdf_meta(report_title)
+                )
+
+                buf.seek(0)
+                zf.writestr(
+                    f"{safe_filename(dsp)}_{safe_filename(dsp_date_safe)}.pdf",
+                    buf.read(),
+                )
+
+        zip_buf.seek(0)
+        return zip_buf.read()
+
     compression_method = get_zip_compression_method()
-    with zipfile.ZipFile(zip_buf, "w", compression=compression_method) as zf:
-        styles = getSampleStyleSheet()
-        title_style = styles["Heading3"]
-        title_style.fontName = PDF_FONT
+    try:
+        zip_bytes = build_zip_bytes(compression_method)
+    except NotImplementedError:
+        zip_bytes = build_zip_bytes(zipfile.ZIP_STORED)
 
-        for dsp, g in groups:
-            buf = io.BytesIO()
-            doc = SimpleDocTemplate(
-                buf,
-                pagesize=landscape(letter),
-                leftMargin=18, rightMargin=18,
-                topMargin=18, bottomMargin=18
-            )
+    zip_buf = io.BytesIO(zip_bytes)
 
-            dsp_date_display, dsp_date_safe = dsp_date_labels.get(
-                dsp, (report_date_display, report_date_safe)
-            )
-
-            story = []
-            story.append(Paragraph(f"DSP: {dsp} | Date: {dsp_date_display}", title_style))
-            story.append(Spacer(1, 6))
-
-            data = [headers] + g.values.tolist()
-            table = Table(data, repeatRows=1)
-            table.setStyle(TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
-            ]))
-            story.append(table)
-
-            report_title = f"DSP: {dsp} | Date: {dsp_date_display}"
-            report_title = f"DSP: {dsp} | Date: {report_date_display}"
-            doc.build(
-                story,
-                onFirstPage=set_pdf_meta(report_title),
-                onLaterPages=set_pdf_meta(report_title)
-            )
-
-            buf.seek(0)
-            zf.writestr(
-                f"{safe_filename(dsp)}_{safe_filename(dsp_date_safe)}.pdf",
-                f"{safe_filename(dsp)}_{safe_filename(report_date_safe)}.pdf",
-                buf.read(),
-            )
-
-    zip_buf.seek(0)
     return StreamingResponse(
         zip_buf,
         media_type="application/zip",
