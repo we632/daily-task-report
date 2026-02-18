@@ -41,11 +41,11 @@ templates = Jinja2Templates(directory="templates")
 # Key 是代码内部使用的“标准名”，Value 是 Excel 中可能出现的表头别名
 COLUMN_ALIASES = {
     "运单号": ["运单号", "Tracking No.", "Tracking Number", "TrackingNo", "Waybill"],
-    "DSP名称": ["DSP名称", "DSP", "DSP Name", "dsp_name"],
+    "DSP名称": ["DSP名称", "DSP", "DSP Name", "dsp_name", "最后一次操作DSP"],
     "区域名称": ["区域名称", "区域", "Area", "Zone"],
-    "司机名称": ["司机名称", "name", "Delivery Driver", "Driver Name"],
+    "司机名称": ["司机名称", "name", "Delivery Driver", "Driver Name", "Driver", "最后一次操作司机"],
     "任务日期": ["任务日期", "日期", "Task Date", "Date"],
-    "运单状态": ["运单状态", "状态", "Status"],
+    "运单状态": ["运单状态", "状态", "Status", "订单状态"],
     "仓库名称": ["仓库名称", "仓库", "Warehouse", "WH"],
 }
 
@@ -134,6 +134,21 @@ def read_excel(upload_bytes: bytes) -> pd.DataFrame:
     return df
 
 
+def read_combined_excels(file_ids: list[str]) -> pd.DataFrame:
+    if not file_ids:
+        raise ValueError("No files provided.")
+
+    frames = []
+    for fid in file_ids:
+        content = load_file(fid)
+        frames.append(read_excel(content))
+
+    if not frames:
+        raise ValueError("No valid files provided.")
+
+    return pd.concat(frames, ignore_index=True)
+
+
 def unique_sorted(df: pd.DataFrame, col: str) -> list[str]:
     if col not in df.columns:
         return []
@@ -163,12 +178,25 @@ def select_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     return df[cols].copy()
 
 
-def build_report_date_label(df: pd.DataFrame) -> str:
+
+
+def get_zip_compression_method() -> int:
+    """
+    在运行环境不支持 zlib/DEFLATED 时，回退到 ZIP_STORED，避免导出崩溃。
+    """
+    try:
+        import zlib  # noqa: F401
+        return zipfile.ZIP_DEFLATED
+    except Exception:
+        return zipfile.ZIP_STORED
+
+
+def build_report_date_label(df: pd.DataFrame) -> tuple[str, str]:
     """
     从筛选后的数据里提取任务日期，生成可用于标题/文件名的日期标签。
     """
     if "任务日期" not in df.columns:
-        return "unknown-date"
+        return "unknown-date", "unknown-date"
 
     dates = (
         df["任务日期"]
@@ -181,12 +209,26 @@ def build_report_date_label(df: pd.DataFrame) -> str:
     )
 
     if not dates:
-        return "unknown-date"
+        return "unknown-date", "unknown-date"
+
+    parsed_dates = pd.to_datetime(dates, errors="coerce")
+
+    if parsed_dates.notna().any():
+        valid = parsed_dates.dropna()
+        start = valid.min()
+        end = valid.max()
+
+        start_display = f"{start.month}/{start.day}"
+        end_display = f"{end.month}/{end.day}"
+        display = start_display if start == end else f"{start_display}-{end_display}"
+        return display, display.replace("/", "-")
 
     dates = sorted(dates)
     if len(dates) == 1:
-        return dates[0]
-    return f"{dates[0]}_to_{dates[-1]}"
+        return dates[0], dates[0].replace("/", "-")
+
+    display = f"{dates[0]}-{dates[-1]}"
+    return display, display.replace("/", "-")
 
 
 @app.on_event("startup")
@@ -209,9 +251,9 @@ def index(request: Request):
 @app.post("/preview", response_class=HTMLResponse)
 async def preview(
     request: Request,
-    file: UploadFile | None = File(None),
-    file_id: str | None = Form(None),
-    old_file_id: str | None = Form(None),
+    files: list[UploadFile] | None = File(None),
+    file_ids: list[str] = Form([]),
+    old_file_ids: list[str] = Form([]),
     # 列选择
     selected_columns: list[str] = Form([]),
 
@@ -223,33 +265,41 @@ async def preview(
 ):
     # 1) 读取文件（首次上传 or 后续用 file_id）
 # 1) 读取文件（首次上传 or 后续用 file_id）
-    if file is not None:
+    if files:
         MAX_UPLOAD_MB = 20
         MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
-        content = await file.read()
-        if len(content) > MAX_UPLOAD_BYTES:
-            raise ValueError(f"File too large (>{MAX_UPLOAD_MB}MB).")
+        uploaded_file_ids = []
+        for file in files:
+            content = await file.read()
+            if not content:
+                continue
+            if len(content) > MAX_UPLOAD_BYTES:
+                raise ValueError(f"File too large (>{MAX_UPLOAD_MB}MB).")
+            uploaded_file_ids.append(save_file(content))
 
-        # 先保存新文件
-        file_id = save_file(content)
+        if not uploaded_file_ids:
+            raise ValueError("No valid file uploaded.")
 
         # ✅ 再删除旧 file（只在“上传新文件”时做）
-        if old_file_id and old_file_id in FILE_STORE:
-            info = FILE_STORE.pop(old_file_id, None)
-            if info:
-                path = info.get("path")
-                if path and os.path.exists(path):
-                    with suppress(Exception):
-                        os.remove(path)
+        for old_file_id in old_file_ids:
+            if old_file_id and old_file_id in FILE_STORE:
+                info = FILE_STORE.pop(old_file_id, None)
+                if info:
+                    path = info.get("path")
+                    if path and os.path.exists(path):
+                        with suppress(Exception):
+                            os.remove(path)
+
+        active_file_ids = uploaded_file_ids
 
     else:
-        if not file_id:
-            raise ValueError("No file or file_id provided.")
-        content = load_file(file_id)
+        if not file_ids:
+            raise ValueError("No file or file_ids provided.")
+        active_file_ids = file_ids
 
     # 2) 读取 Excel
-    df = read_excel(content)
+    df = read_combined_excels(active_file_ids)
     df["_orig_index"] = df.index.astype(int)
 
     # 3) 生成筛选选项
@@ -295,7 +345,7 @@ async def preview(
         "report.html",
         {
             "request": request,
-            "file_id": file_id,
+            "file_ids": active_file_ids,
             "row_count": len(fdf),
 
             "grouped": grouped,
@@ -318,15 +368,14 @@ async def preview(
 
 @app.post("/export/excel")
 def export_excel(
-    file_id: str = Form(...),
+    file_ids: list[str] = Form([]),
     selected_columns: list[str] = Form([]),
     selected_dsps: list[str] = Form([]),
     selected_areas: list[str] = Form([]),
     selected_drivers: list[str] = Form([]),
     selected_statuses: list[str] = Form([]),
 ):
-    content = load_file(file_id)
-    df = read_excel(content)
+    df = read_combined_excels(file_ids)
 
     fdf = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
     fdf = select_columns(fdf, selected_columns or DEFAULT_COLUMNS)
@@ -352,15 +401,14 @@ def export_excel(
     )
 @app.post("/export/pdf")
 def export_pdf(
-    file_id: str = Form(...),
+    file_ids: list[str] = Form([]),
     selected_columns: list[str] = Form([]),
     selected_dsps: list[str] = Form([]),
     selected_areas: list[str] = Form([]),
     selected_drivers: list[str] = Form([]),
     selected_statuses: list[str] = Form([]),
 ):
-    content = load_file(file_id)
-    df = read_excel(content)
+    df = read_combined_excels(file_ids)
 
     fdf = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
     fdf = select_columns(fdf, selected_columns or DEFAULT_COLUMNS)
@@ -410,18 +458,25 @@ def export_pdf(
 
 @app.post("/export/pdf_zip")
 def export_pdf_zip(
-    file_id: str = Form(...),
+    file_ids: list[str] = Form([]),
     selected_columns: list[str] = Form([]),
     selected_dsps: list[str] = Form([]),
     selected_areas: list[str] = Form([]),
     selected_drivers: list[str] = Form([]),
     selected_statuses: list[str] = Form([]),
 ):
-    content = load_file(file_id)
-    df = read_excel(content)
+    df = read_combined_excels(file_ids)
 
     filtered_df = apply_filters(df, selected_dsps, selected_areas, selected_drivers, selected_statuses)
-    report_date_label = build_report_date_label(filtered_df)
+    report_date_display, report_date_safe = build_report_date_label(filtered_df)
+
+    if "DSP名称" in filtered_df.columns:
+        dsp_date_labels = {
+            dsp: build_report_date_label(group_df)
+            for dsp, group_df in filtered_df.groupby("DSP名称", dropna=False)
+        }
+    else:
+        dsp_date_labels = {"ALL": build_report_date_label(filtered_df)}
 
     fdf = select_columns(filtered_df, selected_columns or DEFAULT_COLUMNS)
     headers = [COLUMN_MAP.get(c, c) for c in fdf.columns]
@@ -445,51 +500,66 @@ def export_pdf_zip(
             canvas.setAuthor("WMS Report")
         return _cb
 
-    zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        styles = getSampleStyleSheet()
-        title_style = styles["Heading3"]
-        title_style.fontName = PDF_FONT
+    def build_zip_bytes(compression_method: int) -> bytes:
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w", compression=compression_method) as zf:
+            styles = getSampleStyleSheet()
+            title_style = styles["Heading3"]
+            title_style.fontName = PDF_FONT
 
-        for dsp, g in groups:
-            buf = io.BytesIO()
-            doc = SimpleDocTemplate(
-                buf,
-                pagesize=landscape(letter),
-                leftMargin=18, rightMargin=18,
-                topMargin=18, bottomMargin=18
-            )
+            for dsp, g in groups:
+                buf = io.BytesIO()
+                doc = SimpleDocTemplate(
+                    buf,
+                    pagesize=landscape(letter),
+                    leftMargin=18, rightMargin=18,
+                    topMargin=18, bottomMargin=18
+                )
 
-            story = []
-            story.append(Paragraph(f"DSP: {dsp}", title_style))
-            story.append(Spacer(1, 6))
+                dsp_date_display, dsp_date_safe = dsp_date_labels.get(
+                    dsp, (report_date_display, report_date_safe)
+                )
 
-            data = [headers] + g.values.tolist()
-            table = Table(data, repeatRows=1)
-            table.setStyle(TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
-            ]))
-            story.append(table)
+                story = []
+                story.append(Paragraph(f"DSP: {dsp} | Date: {dsp_date_display}", title_style))
+                story.append(Spacer(1, 6))
 
-            report_title = f"DSP: {dsp} | Date: {report_date_label}"
-            doc.build(
-                story,
-                onFirstPage=set_pdf_meta(report_title),
-                onLaterPages=set_pdf_meta(report_title)
-            )
+                data = [headers] + g.values.tolist()
+                table = Table(data, repeatRows=1)
+                table.setStyle(TableStyle([
+                    ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+                ]))
+                story.append(table)
 
-            buf.seek(0)
-            zf.writestr(
-                f"{safe_filename(dsp)}_{safe_filename(report_date_label)}.pdf",
-                buf.read(),
-            )
+                report_title = f"DSP: {dsp} | Date: {dsp_date_display}"
+                doc.build(
+                    story,
+                    onFirstPage=set_pdf_meta(report_title),
+                    onLaterPages=set_pdf_meta(report_title)
+                )
 
-    zip_buf.seek(0)
+                buf.seek(0)
+                zf.writestr(
+                    f"{safe_filename(dsp)}_{safe_filename(dsp_date_safe)}.pdf",
+                    buf.read(),
+                )
+
+        zip_buf.seek(0)
+        return zip_buf.read()
+
+    compression_method = get_zip_compression_method()
+    try:
+        zip_bytes = build_zip_bytes(compression_method)
+    except NotImplementedError:
+        zip_bytes = build_zip_bytes(zipfile.ZIP_STORED)
+
+    zip_buf = io.BytesIO(zip_bytes)
+
     return StreamingResponse(
         zip_buf,
         media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=reports_by_dsp.zip"},
+        headers={"Content-Disposition": f"attachment; filename=reports_by_dsp_{report_date_safe}.zip"},
     )
