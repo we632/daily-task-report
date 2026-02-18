@@ -521,6 +521,7 @@ def export_pdf_zip(
             story.append(table)
 
             report_title = f"DSP: {dsp} | Date: {dsp_date_display}"
+            report_title = f"DSP: {dsp} | Date: {report_date_display}"
             doc.build(
                 story,
                 onFirstPage=set_pdf_meta(report_title),
@@ -530,6 +531,7 @@ def export_pdf_zip(
             buf.seek(0)
             zf.writestr(
                 f"{safe_filename(dsp)}_{safe_filename(dsp_date_safe)}.pdf",
+                f"{safe_filename(dsp)}_{safe_filename(report_date_safe)}.pdf",
                 buf.read(),
             )
 
