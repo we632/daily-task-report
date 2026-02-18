@@ -233,9 +233,9 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
 <div class="card">
   <h3 style="margin:0 0 10px;">Change / Upload New File</h3>
   <form action="/preview" method="post" enctype="multipart/form-data" class="btnbar">
-    <input type="hidden" name="old_file_id" value="{{file_id}}">
+    {% for fid in file_ids %}<input type="hidden" name="old_file_ids" value="{{fid}}">{% endfor %}
 
-    <input type="file" name="file" accept=".xlsx,.xls" required>
+    <input type="file" name="files" accept=".xlsx,.xls" required multiple>
     <!-- 保留当前筛选（可选：换文件后你也可以让筛选清空，这里先保留） -->
     {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
     {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
@@ -246,9 +246,9 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
   </form>
 </div>
 
-  <!-- Update Preview：不再上传文件，只传 file_id + 选择项 -->
+  <!-- Update Preview：不再上传文件，只传 file_ids + 选择项 -->
   <form class="card" action="/preview" method="post">
-    <input type="hidden" name="file_id" value="{{file_id}}">
+    {% for fid in file_ids %}<input type="hidden" name="file_ids" value="{{fid}}">{% endfor %}
 
     <div class="row">
       <div class="col">
@@ -308,11 +308,11 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
     </div>
   </form>
 
-  <!-- 导出：只传 file_id + 当前选择项 -->
+  <!-- 导出：只传 file_ids + 当前选择项 -->
   <div class="card">
     <div class="btnbar">
       <form action="/export/excel" method="post">
-        <input type="hidden" name="file_id" value="{{file_id}}">
+        {% for fid in file_ids %}<input type="hidden" name="file_ids" value="{{fid}}">{% endfor %}
         {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
         {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
         {% for v in selected_areas %}<input type="hidden" name="selected_areas" value="{{v}}">{% endfor %}
@@ -322,7 +322,7 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
       </form>
 
       <form action="/export/pdf" method="post">
-        <input type="hidden" name="file_id" value="{{file_id}}">
+        {% for fid in file_ids %}<input type="hidden" name="file_ids" value="{{fid}}">{% endfor %}
         {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
         {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
         {% for v in selected_areas %}<input type="hidden" name="selected_areas" value="{{v}}">{% endfor %}
@@ -331,7 +331,7 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
         <button class="btn secondary" type="submit">Export PDF</button>
       </form>
       <form action="/export/pdf_zip" method="post">
-        <input type="hidden" name="file_id" value="{{file_id}}">
+        {% for fid in file_ids %}<input type="hidden" name="file_ids" value="{{fid}}">{% endfor %}
   {% for c in selected_columns %}<input type="hidden" name="selected_columns" value="{{c}}">{% endfor %}
   {% for v in selected_dsps %}<input type="hidden" name="selected_dsps" value="{{v}}">{% endfor %}
   {% for v in selected_areas %}<input type="hidden" name="selected_areas" value="{{v}}">{% endfor %}
