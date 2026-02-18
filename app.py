@@ -178,6 +178,19 @@ def select_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     return df[cols].copy()
 
 
+
+
+def get_zip_compression_method() -> int:
+    """
+    在运行环境不支持 zlib/DEFLATED 时，回退到 ZIP_STORED，避免导出崩溃。
+    """
+    try:
+        import zlib  # noqa: F401
+        return zipfile.ZIP_DEFLATED
+    except Exception:
+        return zipfile.ZIP_STORED
+
+
 def build_report_date_label(df: pd.DataFrame) -> tuple[str, str]:
     """
     从筛选后的数据里提取任务日期，生成可用于标题/文件名的日期标签。
@@ -488,7 +501,8 @@ def export_pdf_zip(
         return _cb
 
     zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    compression_method = get_zip_compression_method()
+    with zipfile.ZipFile(zip_buf, "w", compression=compression_method) as zf:
         styles = getSampleStyleSheet()
         title_style = styles["Heading3"]
         title_style.fontName = PDF_FONT
