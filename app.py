@@ -41,10 +41,10 @@ templates = Jinja2Templates(directory="templates")
 # Key 是代码内部使用的“标准名”，Value 是 Excel 中可能出现的表头别名
 COLUMN_ALIASES = {
     "运单号": ["运单号", "Tracking No.", "Tracking Number", "TrackingNo", "Waybill"],
-    "DSP名称": ["DSP名称", "DSP", "DSP Name", "dsp_name", "最后一次操作DSP"],
-    "区域名称": ["区域名称", "区域", "Area", "Zone"],
-    "司机名称": ["司机名称", "name", "Delivery Driver", "Driver Name", "Driver", "最后一次操作司机"],
-    "任务日期": ["任务日期", "日期", "Task Date", "Date"],
+    "DSP名称": ["DSP名称", "DSP", "DSP Name", "dsp_name", "最后一次操作DSP", "所属DSP"],
+    "区域名称": ["区域名称", "区域", "Area", "Zone", "分拣代码(3段码格式)"],
+    "司机名称": ["司机名称", "name", "Delivery Driver", "Driver Name", "Driver", "最后一次操作司机", "最后扫码司机"],
+    "任务日期": ["任务日期", "日期", "Task Date", "Date", "派件扫描时间"],
     "运单状态": ["运单状态", "状态", "Status", "订单状态"],
     "仓库名称": ["仓库名称", "仓库", "Warehouse", "WH"],
 }
@@ -75,6 +75,17 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
                 rename_dict[col] = standard_name
                 break
     return df.rename(columns=rename_dict)
+
+
+def normalize_values(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    统一字段值格式：
+    - 区域名称：若是 3 段码（如 EWR-PHL-B11），只保留最后一段（B11）。
+    """
+    if "区域名称" in df.columns:
+        area_series = df["区域名称"].fillna("").astype(str).str.strip()
+        df["区域名称"] = area_series.str.split("-").str[-1].str.strip()
+    return df
 
 # 上传文件内存缓存：file_id -> {"bytes":..., "ts":...}
 # 临时文件缓存：file_id -> {"path":..., "ts":..., "size":...}
@@ -125,7 +136,8 @@ def read_excel(upload_bytes: bytes) -> pd.DataFrame:
     df = pd.read_excel(io.BytesIO(upload_bytes), sheet_name=0)
     
     # --- 新增这一行 ---
-    df = normalize_columns(df) 
+    df = normalize_columns(df)
+    df = normalize_values(df)
     # -----------------
 
     df = df.dropna(how="all")
