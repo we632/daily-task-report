@@ -1,311 +1,325 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Daily Task Report</title>
 
-  <!-- ── 把这里的 URL 换成你的 HF Spaces 地址 ── -->
   <script>
     // ✅ 部署后只需修改这一行
     window.API_BASE = "https://mw893-daily-report.hf.space";
   </script>
 
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
-  <style>
-    :root {
-      --bg: #f6f7fb;
-      --card: #ffffff;
-      --border: #e6e8ef;
-      --text: #111827;
-      --muted: #6b7280;
-      --soft: #f3f4f6;
-      --shadow: 0 6px 18px rgba(17,24,39,.06);
-      --primary: #111827;
-    }
+<style>
+:root {
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --border: #e6e8ef;
+  --text: #111827;
+  --muted: #6b7280;
+  --soft: #f3f4f6;
+  --shadow: 0 6px 18px rgba(17,24,39,.06);
+  --primary: #111827;
+}
 
-    * { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  margin: 18px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  line-height: 1.5;
+}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      line-height: 1.5;
-    }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  width: auto;
+  position: relative;
+  overflow: visible;
+}
 
-    .container { max-width: 1200px; margin: 0 auto; }
+.row {
+  display: flex !important;
+  gap: 15px !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start;
+}
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      margin-bottom: 14px;
-      box-shadow: var(--shadow);
-      overflow: visible;
-    }
+.col { min-width: 260px; flex: 1; }
+.card .row > div { margin-bottom: 10px; }
 
-    h2 { margin: 0 0 6px; font-size: 20px; font-weight: 700; text-align: center; }
-    h3 { margin: 0 0 12px; font-size: 15px; }
-    .meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
+h3 { margin: 0 0 10px; font-size: 15px; }
+.meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 
-    .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
-    .col { min-width: 220px; flex: 1; }
+label {
+  font-size: 12px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
 
-    label {
-      font-size: 12px;
-      color: var(--muted);
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 500;
-    }
+.btnbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-    .btnbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.btn {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.btn:hover { opacity: .9; transform: translateY(-1px); }
+.btn:active { transform: translateY(1px); }
+.btn.secondary { background: #fff; color: var(--primary); border-color: var(--border); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
-    .btn {
-      border: 1px solid var(--primary);
-      background: var(--primary);
-      color: #fff;
-      padding: 9px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      transition: all 0.15s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn:hover { opacity: .88; transform: translateY(-1px); }
-    .btn:active { transform: translateY(1px); }
-    .btn.secondary { background: #fff; color: var(--primary); border-color: var(--border); }
-    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+  min-height: 44px;
+}
 
-    input[type="file"] {
-      width: 100%;
-      border: 2px dashed var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      background: var(--soft);
-      font-size: 13px;
-      cursor: pointer;
-    }
-    input[type="file"]:hover { border-color: var(--primary); }
+/* ── Upload 首页 ── */
+#uploadSection {
+  max-width: 600px;
+  margin: 40px auto;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+#uploadSection h2 { text-align: center; color: var(--primary); margin-top: 0; }
 
-    .column-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
-    }
-    .column-list label {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 13px;
-      color: var(--text);
-      cursor: pointer;
-    }
+.column-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 15px 0;
+}
+.column-list label {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px !important;
+  cursor: pointer;
+  color: var(--text) !important;
+}
 
-    /* upload section */
-    #uploadSection { max-width: 600px; margin: 40px auto; }
-    #uploadSection h2 { margin-bottom: 20px; }
+#uploadSection .btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  justify-content: center;
+}
 
-    /* report section */
-    #reportSection { display: none; }
+/* ── Report 页 ── */
+#reportSection { display: none; }
 
-    .tableWrap {
-      width: 100%;
-      overflow-x: auto;
-      border-radius: 12px;
-      background: #fff;
-      border: 1px solid var(--border);
-      margin-top: 10px;
-    }
+/* ── 表格 ── */
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
 
-    table { width: 100% !important; border-collapse: separate; border-spacing: 0; }
-    th, td {
-      padding: 10px 12px;
-      font-size: 12px;
-      vertical-align: middle;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-      text-align: left;
-    }
-    thead th { background: #f8fafc; font-weight: 700; color: var(--primary); }
-    tbody tr:nth-child(even) { background: #fcfcfd; }
-    tbody tr:hover { background: #f6f7fb !important; }
-    table.dataTable.display tbody tr > .sorting_1 { background-color: transparent !important; }
+table { width: 100% !important; border-collapse: separate; border-spacing: 0; }
 
-    .dspTitle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .dspBadge {
-      font-size: 12px;
-      color: var(--muted);
-      background: var(--soft);
-      border: 1px solid var(--border);
-      padding: 4px 12px;
-      border-radius: 99px;
-    }
+th, td {
+  padding: 10px 12px;
+  font-size: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  text-align: left;
+}
 
-    .tableWrap table.dataTable { width: 100% !important; table-layout: fixed; }
-    .tableWrap table.dataTable thead th,
-    .tableWrap table.dataTable tbody td {
-      text-align: left !important;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .tableWrap .dataTables_filter { text-align: right; }
-    .tableWrap .dataTables_filter input { margin-left: 8px; }
+thead th {
+  background: #f8fafc;
+  z-index: 10;
+  font-weight: 700;
+  color: var(--primary);
+}
 
-    /* Choices.js */
-    .choices__inner {
-      border: 1px solid var(--border) !important;
-      border-radius: 12px !important;
-      min-height: 44px !important;
-      padding: 6px 10px !important;
-      background: #fff !important;
-    }
-    .choices__list--multiple .choices__item {
-      border-radius: 999px !important;
-      background-color: var(--primary) !important;
-      border: none !important;
-      padding: 4px 10px !important;
-    }
+tbody tr:nth-child(even) { background: #fcfcfd; }
+tbody tr:hover, tbody tr:hover > .sorting_1 { background: #f6f7fb !important; }
 
-    /* spinner */
-    .spinner {
-      display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid #fff;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin .6s linear infinite;
-      vertical-align: middle;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+table.dataTable.display tbody tr > .sorting_1,
+table.dataTable.order-column.build tbody tr > .sorting_1 {
+  background-color: transparent !important;
+}
 
-    .toast {
-      position: fixed;
-      bottom: 24px; right: 24px;
-      background: #1f2937;
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 13px;
-      z-index: 9999;
-      opacity: 0;
-      transition: opacity .3s;
-      pointer-events: none;
-    }
-    .toast.show { opacity: 1; }
-  </style>
+/* ── Choices.js ── */
+.choices__inner {
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  min-height: 44px !important;
+  padding: 6px 10px !important;
+  background: #fff !important;
+}
+.choices__list--multiple .choices__item {
+  border-radius: 999px !important;
+  background-color: var(--primary) !important;
+  border: none !important;
+  padding: 4px 10px !important;
+}
+
+/* ── DSP 卡片 ── */
+.dspTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.dspBadge {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--soft);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 99px;
+}
+
+.tableWrap .dataTables_wrapper { width: 100%; }
+.tableWrap table.dataTable { width: 100% !important; table-layout: fixed; }
+.tableWrap table.dataTable thead th,
+.tableWrap table.dataTable tbody td {
+  text-align: left !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tableWrap .dataTables_length,
+.tableWrap .dataTables_filter,
+.tableWrap .dataTables_info,
+.tableWrap .dataTables_paginate { padding: 10px 12px; }
+.tableWrap .dataTables_filter { text-align: right; }
+.tableWrap .dataTables_filter input { margin-left: 8px; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: #1f2937;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
-<div class="container">
 
-  <!-- ══════════════════ UPLOAD SECTION ══════════════════ -->
-  <div id="uploadSection" class="card">
-    <h2>📦 Daily Task Report</h2>
-    <p class="meta" style="text-align:center;">Upload one or more Excel files to get started</p>
+<!-- ══ UPLOAD 首页 ══ -->
+<div id="uploadSection">
+  <h2>Upload Excel</h2>
 
-    <div style="margin-bottom:20px;">
-      <label>Excel File(s):</label>
-      <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
-    </div>
-
-    <div style="margin-bottom:20px;">
-      <h3 style="font-size:14px; margin-bottom:10px;">Select Columns to Display</h3>
-      <div class="column-list" id="uploadColumnList"></div>
-    </div>
-
-    <button class="btn" id="uploadBtn" onclick="doUpload()">
-      Preview Report
-    </button>
+  <div style="margin-bottom:20px;">
+    <label style="display:block;margin-bottom:8px;font-weight:500;font-size:14px;color:var(--text);">Excel File:</label>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" multiple style="width:100%;">
   </div>
 
-  <!-- ══════════════════ REPORT SECTION ══════════════════ -->
-  <div id="reportSection">
+  <h3 style="font-size:16px;margin-top:25px;">Select Columns</h3>
+  <div class="column-list" id="uploadColumnList"></div>
 
-    <!-- Row count -->
-    <div class="card" id="summaryCard">
-      <h2>Preview</h2>
-      <div class="meta" id="rowCountLabel">Rows: —</div>
-    </div>
-
-    <!-- Change file -->
-    <div class="card">
-      <h3>Change / Upload New File</h3>
-      <div class="btnbar">
-        <input type="file" id="reuploadInput" accept=".xlsx,.xls" multiple style="max-width:360px;">
-        <button class="btn" onclick="doReupload()">Load New File</button>
-      </div>
-    </div>
-
-    <!-- Filters + columns -->
-    <div class="card">
-      <div class="row" id="filterRow"></div>
-
-      <div class="card" style="margin-top:12px;">
-        <h3 style="margin-bottom:10px;">Columns</h3>
-        <div class="column-list" id="reportColumnList"></div>
-      </div>
-
-      <div class="btnbar" style="margin-top:14px;">
-        <button class="btn" onclick="doPreview()">Update Preview</button>
-      </div>
-    </div>
-
-    <!-- Export buttons -->
-    <div class="card">
-      <div class="btnbar">
-        <button class="btn secondary" onclick="doExport('excel')">Export Excel</button>
-        <button class="btn secondary" onclick="doExport('pdf')">Export PDF</button>
-        <button class="btn secondary" onclick="doExport('pdf_zip')">Export PDF (ZIP by DSP)</button>
-      </div>
-    </div>
-
-    <!-- Tables container -->
-    <div id="tablesContainer"></div>
+  <div style="margin-top:24px;">
+    <button class="btn" id="uploadBtn" onclick="doUpload()">Preview Report</button>
   </div>
-
 </div>
 
-<!-- Toast notification -->
+<!-- ══ REPORT 页 ══ -->
+<div id="reportSection">
+
+  <div class="card">
+    <h2>Preview</h2>
+    <div class="meta" id="rowCountLabel">Rows: —</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px;">Change / Upload New File</h3>
+    <div class="btnbar">
+      <input type="file" id="reuploadInput" accept=".xlsx,.xls" multiple>
+      <button class="btn" onclick="doReupload()">Load New File</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" id="filterRow"></div>
+
+    <div class="card" style="margin-top:12px;">
+      <h3 style="margin-bottom:10px;">Columns</h3>
+      <div class="row" id="reportColumnList"></div>
+    </div>
+
+    <div class="btnbar" style="margin-top:10px;">
+      <button class="btn" onclick="doPreview()">Update Preview</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="btnbar">
+      <button class="btn" onclick="doExport('excel')">Export Excel</button>
+      <button class="btn secondary" onclick="doExport('pdf')">Export PDF</button>
+      <button class="btn secondary" onclick="doExport('pdf_zip')">Export PDF (ZIP by DSP)</button>
+    </div>
+  </div>
+
+  <div id="tablesContainer"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════════════════════
-//  State
-// ══════════════════════════════════════════════════════════
 let state = {
   fileIds: [],
-  columnMap: {},          // { raw: label }
+  columnMap: {},
   defaultColumns: [],
   selectedColumns: [],
-  filterOptions: {
-    dsp: [], area: [], driver: [], status: []
-  },
-  selectedFilters: {
-    dsps: [], areas: [], drivers: [], statuses: []
-  },
-  choicesInstances: {},   // name -> Choices instance
+  filterOptions: { dsp: [], area: [], driver: [], status: [] },
+  selectedFilters: { dsps: [], areas: [], drivers: [], statuses: [] },
+  choicesInstances: {},
 };
 
-// ══════════════════════════════════════════════════════════
-//  Utilities
-// ══════════════════════════════════════════════════════════
 function toast(msg, ms = 3000) {
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -314,17 +328,11 @@ function toast(msg, ms = 3000) {
 }
 
 function setLoading(btn, loading) {
-  if (loading) {
-    btn.disabled = true;
-    btn._orig = btn.innerHTML;
-    btn.innerHTML = `<span class="spinner"></span> Loading…`;
-  } else {
-    btn.disabled = false;
-    btn.innerHTML = btn._orig || btn.innerHTML;
-  }
+  if (loading) { btn.disabled = true; btn._orig = btn.innerHTML; btn.innerHTML = `<span class="spinner"></span>Loading…`; }
+  else { btn.disabled = false; btn.innerHTML = btn._orig || btn.innerHTML; }
 }
 
-function buildFormData(extra = {}) {
+function buildFormData() {
   const fd = new FormData();
   state.fileIds.forEach(id => fd.append("file_ids", id));
   state.selectedColumns.forEach(c => fd.append("selected_columns", c));
@@ -332,31 +340,20 @@ function buildFormData(extra = {}) {
   state.selectedFilters.areas.forEach(v => fd.append("selected_areas", v));
   state.selectedFilters.drivers.forEach(v => fd.append("selected_drivers", v));
   state.selectedFilters.statuses.forEach(v => fd.append("selected_statuses", v));
-  Object.entries(extra).forEach(([k, v]) => fd.append(k, v));
   return fd;
 }
-
-// ══════════════════════════════════════════════════════════
-//  Init: Build column checkboxes on upload page
-// ══════════════════════════════════════════════════════════
-(function initUploadPage() {
-  // Default columns before upload (shown once we know the server's column_map)
-  // We'll populate after first upload response
-})();
 
 function buildColumnList(containerId, columnMap, selectedColumns) {
   const wrap = document.getElementById(containerId);
   wrap.innerHTML = "";
   Object.entries(columnMap).forEach(([raw, label]) => {
-    const lbl = document.createElement("label");
-    lbl.innerHTML = `
-      <input type="checkbox" value="${raw}" ${selectedColumns.includes(raw) ? "checked" : ""}>
-      ${label}
-    `;
-    lbl.querySelector("input").addEventListener("change", () => {
-      syncSelectedColumns(containerId);
-    });
-    wrap.appendChild(lbl);
+    const div = document.createElement("div");
+    div.style.minWidth = "200px";
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;color:var(--text);font-weight:normal;">
+      <input type="checkbox" value="${raw}" ${selectedColumns.includes(raw) ? "checked" : ""}> ${label}
+    </label>`;
+    div.querySelector("input").addEventListener("change", () => syncSelectedColumns(containerId));
+    wrap.appendChild(div);
   });
 }
 
@@ -365,51 +362,33 @@ function syncSelectedColumns(containerId) {
   state.selectedColumns = [...wrap.querySelectorAll("input:checked")].map(i => i.value);
 }
 
-// ══════════════════════════════════════════════════════════
-//  Filter dropdowns (Choices.js)
-// ══════════════════════════════════════════════════════════
 function buildFilterDropdowns() {
   const row = document.getElementById("filterRow");
   row.innerHTML = "";
-
   const filters = [
-    { key: "dsps",    label: "DSP",             options: state.filterOptions.dsp     },
-    { key: "areas",   label: "Area",            options: state.filterOptions.area    },
-    { key: "drivers", label: "Delivery Driver", options: state.filterOptions.driver  },
-    { key: "statuses",label: "Status",          options: state.filterOptions.status  },
+    { key: "dsps",     label: "DSP (multi-select)",             options: state.filterOptions.dsp    },
+    { key: "areas",    label: "Area (multi-select)",            options: state.filterOptions.area   },
+    { key: "drivers",  label: "Delivery Driver (multi-select)", options: state.filterOptions.driver },
+    { key: "statuses", label: "Status (multi-select)",          options: state.filterOptions.status },
   ];
-
-  // destroy old instances
   Object.values(state.choicesInstances).forEach(c => { try { c.destroy(); } catch(e){} });
   state.choicesInstances = {};
-
   filters.forEach(f => {
     const col = document.createElement("div");
     col.className = "col";
-    col.innerHTML = `
-      <label>${f.label} (multi-select)</label>
-      <select name="${f.key}" multiple id="filter_${f.key}"></select>
-    `;
+    col.innerHTML = `<label>${f.label}</label><select class="ms" multiple id="filter_${f.key}"></select>`;
     row.appendChild(col);
-
     const sel = col.querySelector("select");
     f.options.forEach(v => {
       const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
+      opt.value = v; opt.textContent = v;
       opt.selected = state.selectedFilters[f.key].includes(v);
       sel.appendChild(opt);
     });
-
-    const ch = new Choices(sel, {
-      removeItemButton: true,
-      searchEnabled: true,
-      searchResultLimit: 50,
-      shouldSort: false,
-      itemSelectText: "",
-      allowHTML: false,
+    state.choicesInstances[f.key] = new Choices(sel, {
+      removeItemButton: true, searchEnabled: true, searchResultLimit: 50,
+      shouldSort: false, itemSelectText: "", allowHTML: false,
     });
-    state.choicesInstances[f.key] = ch;
   });
 }
 
@@ -420,119 +399,67 @@ function readFilterSelections() {
   });
 }
 
-// ══════════════════════════════════════════════════════════
-//  Upload
-// ══════════════════════════════════════════════════════════
 async function doUpload() {
   const fileInput = document.getElementById("fileInput");
   if (!fileInput.files.length) { toast("⚠️ Please select at least one file"); return; }
-
   const btn = document.getElementById("uploadBtn");
   setLoading(btn, true);
-
   try {
     const fd = new FormData();
     [...fileInput.files].forEach(f => fd.append("files", f));
-
     const res = await fetch(`${window.API_BASE}/api/upload`, { method: "POST", body: fd });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || res.statusText); }
-
     const data = await res.json();
     state.fileIds = data.file_ids;
     state.columnMap = data.column_map;
     state.defaultColumns = data.default_columns;
     state.selectedColumns = [...data.default_columns];
-    state.filterOptions = {
-      dsp:    data.dsp_options,
-      area:   data.area_options,
-      driver: data.driver_options,
-      status: data.status_options,
-    };
+    state.filterOptions = { dsp: data.dsp_options, area: data.area_options, driver: data.driver_options, status: data.status_options };
     state.selectedFilters = { dsps: [], areas: [], drivers: [], statuses: [] };
-
-    // Build report page UI
     buildColumnList("reportColumnList", state.columnMap, state.selectedColumns);
     buildFilterDropdowns();
-
-    // Fetch preview
     await doPreview();
-
     document.getElementById("uploadSection").style.display = "none";
     document.getElementById("reportSection").style.display = "block";
-
-  } catch(e) {
-    toast("❌ " + e.message);
-  } finally {
-    setLoading(btn, false);
-  }
+  } catch(e) { toast("❌ " + e.message); }
+  finally { setLoading(btn, false); }
 }
 
-// ══════════════════════════════════════════════════════════
-//  Re-upload (change file)
-// ══════════════════════════════════════════════════════════
 async function doReupload() {
   const fileInput = document.getElementById("reuploadInput");
   if (!fileInput.files.length) { toast("⚠️ Please select at least one file"); return; }
-
   try {
     const fd = new FormData();
     [...fileInput.files].forEach(f => fd.append("files", f));
-
     const res = await fetch(`${window.API_BASE}/api/upload`, { method: "POST", body: fd });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || res.statusText); }
-
     const data = await res.json();
     state.fileIds = data.file_ids;
-    state.filterOptions = {
-      dsp:    data.dsp_options,
-      area:   data.area_options,
-      driver: data.driver_options,
-      status: data.status_options,
-    };
+    state.filterOptions = { dsp: data.dsp_options, area: data.area_options, driver: data.driver_options, status: data.status_options };
     state.selectedFilters = { dsps: [], areas: [], drivers: [], statuses: [] };
-
     buildFilterDropdowns();
     await doPreview();
     toast("✅ New file loaded");
-
-  } catch(e) {
-    toast("❌ " + e.message);
-  }
+  } catch(e) { toast("❌ " + e.message); }
 }
 
-// ══════════════════════════════════════════════════════════
-//  Preview
-// ══════════════════════════════════════════════════════════
 async function doPreview() {
   syncSelectedColumns("reportColumnList");
   readFilterSelections();
-
   try {
-    const res = await fetch(`${window.API_BASE}/api/preview`, {
-      method: "POST",
-      body: buildFormData(),
-    });
+    const res = await fetch(`${window.API_BASE}/api/preview`, { method: "POST", body: buildFormData() });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || res.statusText); }
     const data = await res.json();
-
     document.getElementById("rowCountLabel").textContent = `Rows: ${data.row_count}`;
     renderTables(data.grouped, data.headers);
-
-  } catch(e) {
-    toast("❌ " + e.message);
-  }
+  } catch(e) { toast("❌ " + e.message); }
 }
 
-// ══════════════════════════════════════════════════════════
-//  Render tables
-// ══════════════════════════════════════════════════════════
 let dtInstances = [];
 
 function renderTables(grouped, headers) {
-  // Destroy old DataTable instances
   dtInstances.forEach(dt => { try { dt.destroy(); } catch(e){} });
   dtInstances = [];
-
   const container = document.getElementById("tablesContainer");
   container.innerHTML = "";
 
@@ -545,104 +472,68 @@ function renderTables(grouped, headers) {
         <span class="dspBadge">${group.rows.length} rows</span>
       </div>
       <div class="tableWrap">
-        <table id="dt-${idx}" class="display nowrap">
+        <table id="dt-${idx}" class="dataTable-hook display nowrap">
           <thead><tr>
             <th style="display:none;">Index</th>
             ${headers.map(h => `<th>${h}</th>`).join("")}
           </tr></thead>
           <tbody>
             ${group.rows.map(r =>
-              `<tr>
-                <td style="display:none;">${r[0]}</td>
-                ${r.slice(1).map(c => `<td>${c}</td>`).join("")}
-              </tr>`
+              `<tr><td style="display:none;">${r[0]}</td>${r.slice(1).map(c => `<td>${c}</td>`).join("")}</tr>`
             ).join("")}
           </tbody>
         </table>
-      </div>
-    `;
+      </div>`;
     container.appendChild(card);
 
-    const dt = $(`#dt-${idx}`).DataTable({
-      paging: true,
-      pageLength: 10,
-      searching: true,
-      ordering: true,
-      order: [[0, "asc"]],
+    var table = $(`#dt-${idx}`).DataTable({
+      paging: true, pageLength: 10, searching: true, ordering: true,
+      order: [[0, 'asc']],
       columnDefs: [{ targets: 0, visible: false, searchable: false }],
-      orderClasses: false,
-      autoWidth: false,
-      scrollX: true,
-      language: {
-        url: "https://cdn.datatables.net/plug-ins/1.13.7/i18n/zh-HANS.json"
-      }
+      orderClasses: false, autoWidth: false, responsive: false, scrollX: true,
+      language: { url: "https://cdn.datatables.net/plug-ins/1.13.7/i18n/zh-HANS.json" }
     });
-    dtInstances.push(dt);
+    dtInstances.push(table);
 
-    // Three-state sort: asc -> desc -> original
-    let sortState = { col: null, step: 0 };
-    $(`#dt-${idx} thead th`).off("click.tri").on("click.tri", function(e) {
+    var sortState = { col: null, step: 0 };
+    $(`#dt-${idx} thead th`).off('click.tri').on('click.tri', function(e) {
       e.preventDefault(); e.stopImmediatePropagation();
-      const realCol = dt.column(this).index();
+      var realCol = table.column(this).index();
       if (realCol === 0) return;
       if (sortState.col !== realCol) { sortState.col = realCol; sortState.step = 0; }
       sortState.step = (sortState.step + 1) % 3;
-      if (sortState.step === 1) dt.order([realCol, "asc"]).draw();
-      else if (sortState.step === 2) dt.order([realCol, "desc"]).draw();
-      else dt.order([0, "asc"]).draw();
+      if (sortState.step === 1) table.order([realCol, 'asc']).draw();
+      else if (sortState.step === 2) table.order([realCol, 'desc']).draw();
+      else table.order([0, 'asc']).draw();
     });
   });
 }
 
-// ══════════════════════════════════════════════════════════
-//  Export
-// ══════════════════════════════════════════════════════════
 async function doExport(type) {
   syncSelectedColumns("reportColumnList");
   readFilterSelections();
-
   try {
-    const res = await fetch(`${window.API_BASE}/api/export/${type}`, {
-      method: "POST",
-      body: buildFormData(),
-    });
+    const res = await fetch(`${window.API_BASE}/api/export/${type}`, { method: "POST", body: buildFormData() });
     if (!res.ok) throw new Error(await res.text());
-
     const cd = res.headers.get("Content-Disposition") || "";
     const match = cd.match(/filename=([^\s;]+)/);
     const filename = match ? match[1] : `report.${type === "excel" ? "xlsx" : type === "pdf" ? "pdf" : "zip"}`;
-
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
     toast("✅ Download started");
-
-  } catch(e) {
-    toast("❌ Export failed: " + e.message);
-  }
+  } catch(e) { toast("❌ Export failed: " + e.message); }
 }
 
-// ══════════════════════════════════════════════════════════
-//  Init upload page column list with default set
-// ══════════════════════════════════════════════════════════
+// Init
 const DEFAULT_COLUMN_MAP = {
-  "运单号": "Tracking No.",
-  "DSP名称": "DSP Name",
-  "区域名称": "Area",
-  "司机名称": "Driver",
-  "任务日期": "Date",
-  "运单状态": "Status",
-  "仓库名称": "Warehouse",
+  "运单号": "Tracking No.", "DSP名称": "DSP Name", "区域名称": "Area",
+  "司机名称": "Driver", "任务日期": "Date", "运单状态": "Status", "仓库名称": "Warehouse",
 };
 const DEFAULT_SELECTED = ["运单号","DSP名称","区域名称","司机名称","任务日期","运单状态"];
-
 buildColumnList("uploadColumnList", DEFAULT_COLUMN_MAP, DEFAULT_SELECTED);
-document.getElementById("uploadColumnList").addEventListener("change", () => {
-  syncSelectedColumns("uploadColumnList");
-});
-// seed state for first upload
 state.selectedColumns = [...DEFAULT_SELECTED];
 state.columnMap = DEFAULT_COLUMN_MAP;
 </script>
