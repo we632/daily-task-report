@@ -167,9 +167,30 @@ thead th {
 tbody tr:nth-child(even) { background: #fcfcfd; }
 tbody tr:hover, tbody tr:hover > .sorting_1 { background: #f6f7fb !important; }
 
+tbody tr.row-alert-red td,
+tbody tr.row-alert-red > .sorting_1 {
+  background: #fee2e2 !important;
+  color: #7f1d1d !important;
+  font-weight: 600;
+}
+tbody tr.row-alert-yellow td,
+tbody tr.row-alert-yellow > .sorting_1 {
+  background: #fef9c3 !important;
+  color: #78350f !important;
+  font-weight: 600;
+}
+
 table.dataTable.display tbody tr > .sorting_1,
 table.dataTable.order-column.build tbody tr > .sorting_1 {
   background-color: transparent !important;
+}
+table.dataTable.display tbody tr.row-alert-red > .sorting_1,
+table.dataTable.order-column.build tbody tr.row-alert-red > .sorting_1 {
+  background-color: #fee2e2 !important;
+}
+table.dataTable.display tbody tr.row-alert-yellow > .sorting_1,
+table.dataTable.order-column.build tbody tr.row-alert-yellow > .sorting_1 {
+  background-color: #fef9c3 !important;
 }
 
 /* ── Choices.js ── */
@@ -218,6 +239,20 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
 .tableWrap .dataTables_paginate { padding: 10px 12px; }
 .tableWrap .dataTables_filter { text-align: right; }
 .tableWrap .dataTables_filter input { margin-left: 8px; }
+
+.alertToggle {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text) !important;
+  margin-top: 10px;
+}
+.alertHint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
 
 /* ── Toast ── */
 .toast {
@@ -291,6 +326,12 @@ table.dataTable.order-column.build tbody tr > .sorting_1 {
       <div class="row" id="reportColumnList"></div>
     </div>
 
+    <label class="alertToggle">
+      <input type="checkbox" id="highlightToggle">
+      启用超时标记（任务日期：超过72小时黄，超过120小时红）
+    </label>
+    <div class="alertHint">关闭开关时保持你现在的显示样式和导出样式。</div>
+
     <div class="btnbar" style="margin-top:10px;">
       <button class="btn" onclick="doPreview()">Update Preview</button>
     </div>
@@ -315,6 +356,7 @@ let state = {
   columnMap: {},
   defaultColumns: [],
   selectedColumns: [],
+  highlightOverdue: false,
   filterOptions: { dsp: [], area: [], driver: [], status: [] },
   selectedFilters: { dsps: [], areas: [], drivers: [], statuses: [] },
   choicesInstances: {},
@@ -340,6 +382,7 @@ function buildFormData() {
   state.selectedFilters.areas.forEach(v => fd.append("selected_areas", v));
   state.selectedFilters.drivers.forEach(v => fd.append("selected_drivers", v));
   state.selectedFilters.statuses.forEach(v => fd.append("selected_statuses", v));
+  fd.append("highlight_overdue", state.highlightOverdue ? "true" : "false");
   return fd;
 }
 
@@ -464,6 +507,13 @@ function renderTables(grouped, headers) {
   container.innerHTML = "";
 
   grouped.forEach((group, idx) => {
+    const rowLevels = Array.isArray(group.row_levels) ? group.row_levels : [];
+    const bodyRows = group.rows.map((r, rowIdx) => {
+      const level = rowLevels[rowIdx] || "";
+      const rowClass = level === "red" ? "row-alert-red" : level === "yellow" ? "row-alert-yellow" : "";
+      return `<tr class="${rowClass}"><td style="display:none;">${r[0]}</td>${r.slice(1).map(c => `<td>${c}</td>`).join("")}</tr>`;
+    }).join("");
+
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
@@ -478,9 +528,7 @@ function renderTables(grouped, headers) {
             ${headers.map(h => `<th>${h}</th>`).join("")}
           </tr></thead>
           <tbody>
-            ${group.rows.map(r =>
-              `<tr><td style="display:none;">${r[0]}</td>${r.slice(1).map(c => `<td>${c}</td>`).join("")}</tr>`
-            ).join("")}
+            ${bodyRows}
           </tbody>
         </table>
       </div>`;
@@ -536,6 +584,14 @@ const DEFAULT_SELECTED = ["运单号","DSP名称","区域名称","司机名称",
 buildColumnList("uploadColumnList", DEFAULT_COLUMN_MAP, DEFAULT_SELECTED);
 state.selectedColumns = [...DEFAULT_SELECTED];
 state.columnMap = DEFAULT_COLUMN_MAP;
+
+const highlightToggle = document.getElementById("highlightToggle");
+if (highlightToggle) {
+  highlightToggle.addEventListener("change", async (e) => {
+    state.highlightOverdue = e.target.checked;
+    await doPreview();
+  });
+}
 </script>
 </body>
 </html>
