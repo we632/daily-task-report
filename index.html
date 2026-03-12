@@ -248,11 +248,6 @@ table.dataTable.order-column.build tbody tr.row-alert-yellow > .sorting_1 {
   color: var(--text) !important;
   margin-top: 10px;
 }
-.alertHint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
 
 /* ── Toast ── */
 .toast {
@@ -328,9 +323,8 @@ table.dataTable.order-column.build tbody tr.row-alert-yellow > .sorting_1 {
 
     <label class="alertToggle">
       <input type="checkbox" id="highlightToggle">
-      启用超时标记（任务日期：超过72小时黄，超过120小时红）
+      超时标记
     </label>
-    <div class="alertHint">关闭开关时保持你现在的显示样式和导出样式。</div>
 
     <div class="btnbar" style="margin-top:10px;">
       <button class="btn" onclick="doPreview()">Update Preview</button>
@@ -575,6 +569,10 @@ async function doExport(type) {
   } catch(e) { toast("❌ Export failed: " + e.message); }
 }
 
+function shouldWarnBeforeRefresh() {
+  return Array.isArray(state.fileIds) && state.fileIds.length > 0;
+}
+
 // Init
 const DEFAULT_COLUMN_MAP = {
   "运单号": "Tracking No.", "DSP名称": "DSP Name", "区域名称": "Area",
@@ -592,6 +590,12 @@ if (highlightToggle) {
     await doPreview();
   });
 }
+
+window.addEventListener("beforeunload", (e) => {
+  if (!shouldWarnBeforeRefresh()) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
 </script>
 </body>
 </html>
